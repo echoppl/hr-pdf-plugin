@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>登录 - PDF 管理后台</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="login-page">
+  <div class="login-card">
+    <h1 id="pageTitle">登录</h1>
+    <p class="subtitle" id="pageSubtitle">登录以管理您的PDF文件</p>
+
+    <div class="error-msg" id="errorMsg"></div>
+
+    <div class="form-group">
+      <label>用户名</label>
+      <input type="text" id="username" placeholder="请输入用户名" autocomplete="username">
+    </div>
+
+    <div class="form-group">
+      <label>密码</label>
+      <input type="password" id="password" placeholder="请输入密码" autocomplete="current-password">
+    </div>
+
+    <button class="btn btn-primary" id="submitBtn">登录</button>
+
+    <div class="toggle-mode">
+      <span id="toggleText">还没有账号？</span>
+      <a href="javascript:void(0)" id="toggleLink">立即注册</a>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const API_BASE = window.location.origin;
+      let isLogin = true;
+
+      const submitBtn = document.getElementById('submitBtn');
+      const errorMsg = document.getElementById('errorMsg');
+      const pageTitle = document.getElementById('pageTitle');
+      const pageSubtitle = document.getElementById('pageSubtitle');
+      const toggleText = document.getElementById('toggleText');
+      const toggleLink = document.getElementById('toggleLink');
+      const usernameInput = document.getElementById('username');
+      const passwordInput = document.getElementById('password');
+
+      function toggleMode() {
+        isLogin = !isLogin;
+        if (isLogin) {
+          pageTitle.textContent = '登录';
+          pageSubtitle.textContent = '登录以管理您的PDF文件';
+          submitBtn.textContent = '登录';
+          toggleText.textContent = '还没有账号？';
+          toggleLink.textContent = '立即注册';
+        } else {
+          pageTitle.textContent = '注册';
+          pageSubtitle.textContent = '创建账号以开始使用';
+          submitBtn.textContent = '注册';
+          toggleText.textContent = '已有账号？';
+          toggleLink.textContent = '立即登录';
+        }
+        hideError();
+      }
+
+      function showError(msg) {
+        errorMsg.textContent = msg;
+        errorMsg.classList.add('show');
+      }
+
+      function hideError() {
+        errorMsg.classList.remove('show');
+      }
+
+      async function handleSubmit() {
+        hideError();
+
+        const username = usernameInput.value.trim();
+        const password = passwordInput.value;
+
+        if (!username || !password) {
+          showError('请输入用户名和密码');
+          return;
+        }
+
+        const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = isLogin ? '登录中...' : '注册中...';
+
+        try {
+          const url = API_BASE + endpoint;
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password }),
+          });
+
+          const text = await res.text();
+          const data = JSON.parse(text);
+
+          if (data.code === 200 && data.data) {
+            localStorage.setItem('token', data.data.token);
+            localStorage.setItem('username', data.data.username);
+            window.location.href = '/admin/index.html';
+          } else {
+            showError(data.message || '操作失败');
+          }
+        } catch (err) {
+          showError('网络错误: ' + err.message);
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = isLogin ? '登录' : '注册';
+        }
+      }
+
+      // 绑定事件
+      submitBtn.addEventListener('click', handleSubmit);
+      toggleLink.addEventListener('click', function(e) {
+        e.preventDefault();
+        toggleMode();
+      });
+      passwordInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') handleSubmit();
+      });
+
+      // 已登录则跳转
+      if (localStorage.getItem('token')) {
+        window.location.href = '/admin/index.html';
+      }
+    })();
+  </script>
+</body>
+</html>

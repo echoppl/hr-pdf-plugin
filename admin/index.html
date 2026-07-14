@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>文件管理 - PDF 管理后台</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="admin-page">
+  <div class="topbar">
+    <div class="brand">PDF 文件管理</div>
+    <div class="user-info">
+      <span id="displayUsername"></span>
+      <button class="btn btn-ghost btn-logout" id="btnLogout">退出登录</button>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div class="upload-area" id="uploadArea">
+      <div class="upload-icon">📄</div>
+      <div class="upload-text">点击上传或拖拽 PDF 文件到此处</div>
+      <div class="upload-hint" id="uploadHint">仅支持 PDF 格式，最大 10MB</div>
+      <input type="file" id="fileInput" accept=".pdf,application/pdf">
+    </div>
+
+    <div class="upload-progress" id="uploadProgress"></div>
+
+    <div class="file-header">
+      <h2>上传记录</h2>
+      <div class="file-header-right">
+        <input type="text" class="search-box" id="searchBox" placeholder="搜索文件名...">
+        <span class="file-count" id="fileCount"></span>
+      </div>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="file-table" id="fileTable">
+        <thead>
+          <tr>
+            <th class="col-num">#</th>
+            <th class="col-name">文件名</th>
+            <th class="col-size">大小</th>
+            <th class="col-time">上传时间</th>
+            <th class="col-actions">操作</th>
+          </tr>
+        </thead>
+        <tbody id="fileTableBody">
+          <tr><td colspan="5" class="loading">加载中...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 预览模态框 -->
+  <div class="modal-overlay" id="previewModal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <span class="modal-title" id="previewTitle">PDF 预览</span>
+        <div class="modal-actions">
+          <button class="btn btn-ghost btn-sm" id="modalDownload">下载</button>
+          <button class="modal-close" id="modalClose">&times;</button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <iframe id="previewFrame" src="" frameborder="0"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    (function() {
+      const API_BASE = window.location.origin;
+
+      const token = localStorage.getItem('token');
+      const username = localStorage.getItem('username');
+      if (!token) {
+        window.location.href = '/admin/login.html';
+      }
+
+      document.getElementById('displayUsername').textContent = username;
+
+      // ====== 全局状态 ======
+      var allFiles = [];
+      var searchKeyword = '';
+
+      // ====== 元素引用 ======
+      var uploadArea = document.getElementById('uploadArea');
+      var fileInput = document.getElementById('fileInput');
+      var uploadProgress = document.getElementById('uploadProgress');
+      var fileCount = document.getElementById('fileCount');
+      var fileTableBody = document.getElementById('fileTableBody');
+      var searchBox = document.getElementById('searchBox');
+      var toast = document.getElementById('toast');
+      var previewModal = document.getElementById('previewModal');
+      var previewFrame = document.getElementById('previewFrame');
+      var previewTitle = document.getElementById('previewTitle');
+      var modalDownload = document.getElementById('modalDownload');
+      var modalClose = document.getElementById('modalClose');
+
+      // ====== Toast ======
+      function showToast(msg, isError) {
+        toast.textContent = msg;
+        toast.className = 'toast';
+        if (isError) toast.classList.add('error');
+        toast.classList.add('show');
+        setTimeout(function() { toast.classList.remove('show'); }, 3000);
+      }
+
+      // ====== 转义 HTML ======
+      function escapeHtml(str) {
+        var div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+      }
+
+      // ====== 时间格式化 ======
+      function formatTime(dateStr) {
+        if (!dateStr) return '-';
+        var d = new Date(dateStr.replace(' ', 'T'));
+        function pad(n) { return String(n).padStart(2, '0'); }
+        return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+      }
+
+      // ====== 退出 ======
+      function logout() {
+        if (!confirm('确定要退出登录吗？')) return;
+        localStorage.removeItem('token');
+        localStorage.removeItem('username');
+        window.location.href = '/admin/login.html';
+      }
+
+      // ====== 上传文件 ======
+      async function doUpload(file) {
+        if (!file) return;
+
+        if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+          showToast('仅支持 PDF 文件格式', true);
+          return;
+        }
+
+        if (file.size > 10 * 1024 * 1024) {
+          showToast('文件大小不能超过 10MB', true);
+          return;
+        }
+
+        uploadProgress.textContent = '正在上传: ' + file.name + '...';
+        uploadProgress.classList.add('show');
+
+        var formData = new FormData();
+        formData.append('file', file);
+
+        try {
+          var res = await fetch(API_BASE + '/api/files/upload', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + token },
+            body: formData,
+          });
+
+          var data = await res.json();
+
+          if (data.code === 200) {
+            uploadProgress.textContent = '上传成功: ' + data.data.fileName;
+            showToast('文件上传成功');
+            loadFiles();
+          } else {
+            uploadProgress.classList.remove('show');
+            showToast(data.message || '上传失败', true);
+          }
+        } catch (err) {
+          uploadProgress.classList.remove('show');
+          showToast('上传失败: ' + err.message, true);
+        }
+
+        fileInput.value = '';
+
+        setTimeout(function() {
+          uploadProgress.classList.remove('show');
+        }, 3000);
+      }
+
+      // ====== 加载文件列表 ======
+      async function loadFiles() {
+        fileTableBody.innerHTML = '<tr><td colspan="5" class="loading">加载中...</td></tr>';
+
+        try {
+          var res = await fetch(API_BASE + '/api/files/list', {
+            headers: { 'Authorization': 'Bearer ' + token },
+          });
+
+          var data = await res.json();
+
+          if (data.code !== 200) {
+            fileTableBody.innerHTML = '<tr><td colspan="5" class="loading">加载失败</td></tr>';
+            return;
+          }
+
+          allFiles = data.data.files;
+          renderTable();
+
+        } catch (err) {
+          fileTableBody.innerHTML = '<tr><td colspan="5" class="loading">加载失败: ' + escapeHtml(err.message) + '</td></tr>';
+        }
+      }
+
+      // ====== 渲染表格 ======
+      function renderTable() {
+        var files = allFiles;
+
+        // 搜索过滤
+        if (searchKeyword) {
+          files = files.filter(function(f) {
+            return f.fileName.toLowerCase().indexOf(searchKeyword) >= 0;
+          });
+        }
+
+        fileCount.textContent = '共 ' + files.length + ' 个文件';
+
+        if (files.length === 0) {
+          if (searchKeyword) {
+            fileTableBody.innerHTML = '<tr><td colspan="5" class="empty-state"><div class="empty-icon">🔍</div><div class="empty-text">没有匹配的文件</div></td></tr>';
+          } else {
+            fileTableBody.innerHTML = '<tr><td colspan="5" class="empty-state"><div class="empty-icon">📂</div><div class="empty-text">暂无上传记录</div></td></tr>';
+          }
+          return;
+        }
+
+        var html = '';
+        files.forEach(function(f, idx) {
+          var safeName = escapeHtml(f.fileName);
+          var fileId = f.fileId;
+          html += '<tr class="file-row" data-id="' + fileId + '" data-name="' + safeName + '">' +
+            '<td class="col-num">' + (idx + 1) + '</td>' +
+            '<td class="col-name">' +
+              '<div class="file-name-cell">' +
+                '<span class="file-type-icon">📄</span>' +
+                '<span class="file-name-text" title="' + safeName + '">' + safeName + '</span>' +
+              '</div>' +
+            '</td>' +
+            '<td class="col-size">' + f.fileSizeReadable + '</td>' +
+            '<td class="col-time">' + formatTime(f.uploadTime) + '</td>' +
+            '<td class="col-actions">' +
+              '<div class="action-group">' +
+                '<button class="btn btn-ghost btn-sm" data-action="preview" data-id="' + fileId + '" data-name="' + safeName + '">预览</button>' +
+                '<button class="btn btn-ghost btn-sm" data-action="download" data-id="' + fileId + '" data-name="' + safeName + '">下载</button>' +
+                '<button class="btn btn-danger btn-sm" data-action="delete" data-id="' + fileId + '">删除</button>' +
+              '</div>' +
+            '</td>' +
+          '</tr>';
+        });
+        fileTableBody.innerHTML = html;
+      }
+
+      // ====== 搜索 ======
+      searchBox.addEventListener('input', function() {
+        searchKeyword = searchBox.value.trim().toLowerCase();
+        renderTable();
+      });
+
+      // ====== 表格操作（事件委托） ======
+      fileTableBody.addEventListener('click', function(e) {
+        var btn = e.target.closest('button');
+        if (!btn) return;
+
+        var action = btn.getAttribute('data-action');
+        var fileId = btn.getAttribute('data-id');
+        var fileName = btn.getAttribute('data-name');
+
+        if (action === 'preview') {
+          openPreview(fileId, fileName);
+        } else if (action === 'download') {
+          downloadFile(fileId, fileName);
+        } else if (action === 'delete') {
+          if (!confirm('确定要删除「' + fileName + '」吗？')) return;
+          deleteFileItem(fileId);
+        }
+      });
+
+      // ====== 预览模态框 ======
+      function openPreview(fileId, fileName) {
+        var url = API_BASE + '/api/files/' + fileId + '/download?preview=1&token=' + encodeURIComponent(token);
+        previewFrame.src = url;
+        previewTitle.textContent = fileName || 'PDF 预览';
+        modalDownload.setAttribute('data-id', fileId);
+        modalDownload.setAttribute('data-name', fileName);
+        previewModal.classList.add('show');
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closePreview() {
+        previewFrame.src = '';
+        previewModal.classList.remove('show');
+        document.body.style.overflow = '';
+      }
+
+      modalClose.addEventListener('click', closePreview);
+      previewModal.addEventListener('click', function(e) {
+        if (e.target === previewModal) closePreview();
+      });
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && previewModal.classList.contains('show')) closePreview();
+      });
+
+      // 模态框下载按钮
+      modalDownload.addEventListener('click', function() {
+        var fileId = modalDownload.getAttribute('data-id');
+        var fileName = modalDownload.getAttribute('data-name');
+        downloadFile(fileId, fileName);
+      });
+
+      // ====== 下载 ======
+      async function downloadFile(fileId, fileName) {
+        try {
+          var res = await fetch(API_BASE + '/api/files/' + fileId + '/download', {
+            headers: { 'Authorization': 'Bearer ' + token },
+          });
+
+          if (!res.ok) {
+            showToast('下载失败', true);
+            return;
+          }
+
+          var blob = await res.blob();
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement('a');
+          a.href = url;
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        } catch (err) {
+          showToast('下载失败: ' + err.message, true);
+        }
+      }
+
+      // ====== 删除 ======
+      async function deleteFileItem(fileId) {
+        try {
+          var res = await fetch(API_BASE + '/api/files/' + fileId, {
+            method: 'DELETE',
+            headers: { 'Authorization': 'Bearer ' + token },
+          });
+
+          var data = await res.json();
+
+          if (data.code === 200) {
+            showToast('文件已删除');
+            loadFiles();
+          } else {
+            showToast(data.message || '删除失败', true);
+          }
+        } catch (err) {
+          showToast('删除失败: ' + err.message, true);
+        }
+      }
+
+      // ====== 事件绑定 ======
+      uploadArea.addEventListener('click', function() {
+        fileInput.click();
+      });
+
+      fileInput.addEventListener('change', function() {
+        if (fileInput.files[0]) doUpload(fileInput.files[0]);
+      });
+
+      document.getElementById('btnLogout').addEventListener('click', logout);
+
+      uploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        uploadArea.classList.add('drag-over');
+      });
+
+      uploadArea.addEventListener('dragleave', function() {
+        uploadArea.classList.remove('drag-over');
+      });
+
+      uploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('drag-over');
+        var file = e.dataTransfer.files[0];
+        if (file) doUpload(file);
+      });
+
+      loadFiles();
+    })();
+  </script>
+</body>
+</html>
