@@ -2,6 +2,7 @@ node_modules/
 db/data.db
 db/data.db-wal
 db/data.db-shm
+data/
 .env
 uploads/
 *.log

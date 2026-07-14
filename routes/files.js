@@ -3,7 +3,8 @@ const multer = require('multer');
 const path = require('path');
 const authMiddleware = require('../middleware/auth');
 const { uploadToCos, downloadFromCos, deleteFromCos } = require('../services/cos');
-const { createFileRecord, getFilesByUserId, getFileById, deleteFile } = require('../db/database');
+const { createFileRecord, getFilesByUserId, getFileById, deleteFile, upsertResumeParsed } = require('../db/database');
+const { parseResume } = require('../services/resume-parser');
 
 const router = express.Router();
 
@@ -67,6 +68,22 @@ router.post('/upload', upload.single('file'), async (req, res) => {
         uploadTime: record.upload_time,
       },
     });
+
+    // 异步触发简历解析（不阻塞上传响应）
+    if (buffer && buffer.length > 0) {
+      parseResume(buffer)
+        .then((parsed) => {
+          // 归一化手机号：去掉横线、空格、括号
+          if (parsed.phone) {
+            parsed.phone = parsed.phone.replace(/[\s\-\(\)（）]/g, '');
+          }
+          upsertResumeParsed(record.id, parsed);
+          console.log(`简历解析完成: ${record.id}`);
+        })
+        .catch((err) => {
+          console.log(`简历解析失败 (${record.id}): ${err.message}`);
+        });
+    }
   } catch (err) {
     if (err.message === '仅支持 PDF 文件格式') {
       return res.status(400).json({ code: 400, message: err.message });
@@ -88,6 +105,23 @@ router.get('/list', (req, res) => {
       fileSize: f.file_size,
       fileSizeReadable: f.file_size_readable,
       uploadTime: f.upload_time,
+      // 解析字段
+      parsed: f.parsed_at ? {
+        name: f.name || '',
+        gender: f.gender || '',
+        age: f.age || '',
+        education: f.education || '',
+        city: f.city || '',
+        years_total: f.years_total || '',
+        target_position: f.target_position || '',
+        phone: f.phone || '',
+        email: f.email || '',
+        work_experiences: f.work_experiences || [],
+        source_channel: f.source_channel || '',
+        hr_name: f.hr_name || '',
+        reviewer: f.reviewer || '',
+        parsed_at: f.parsed_at,
+      } : null,
     }));
 
     res.json({

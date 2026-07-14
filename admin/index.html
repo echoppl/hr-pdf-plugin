@@ -19,7 +19,7 @@
     <div class="upload-area" id="uploadArea">
       <div class="upload-icon">📄</div>
       <div class="upload-text">点击上传或拖拽 PDF 文件到此处</div>
-      <div class="upload-hint" id="uploadHint">仅支持 PDF 格式，最大 10MB</div>
+      <div class="upload-hint" id="uploadHint">仅支持 PDF 格式，最大 10MB · 上传后自动解析简历</div>
       <input type="file" id="fileInput" accept=".pdf,application/pdf">
     </div>
 
@@ -28,24 +28,33 @@
     <div class="file-header">
       <h2>上传记录</h2>
       <div class="file-header-right">
-        <input type="text" class="search-box" id="searchBox" placeholder="搜索文件名...">
+        <input type="text" class="search-box" id="searchBox" placeholder="搜索（文件名/姓名/手机/职位...）">
         <span class="file-count" id="fileCount"></span>
       </div>
     </div>
 
+    <div class="edit-hint" id="editHint">
+      <span class="edit-hint-icon">✏️</span>
+      <span>鼠标悬停在手机/邮箱/职位等字段上，点击即可直接编辑 · 工作经历可点击「展开」查看全部</span>
+    </div>
     <div class="table-wrapper">
       <table class="file-table" id="fileTable">
         <thead>
           <tr>
             <th class="col-num">#</th>
-            <th class="col-name">文件名</th>
-            <th class="col-size">大小</th>
+            <th class="col-parsed">姓名</th>
+            <th class="col-parsed">手机</th>
+            <th class="col-parsed col-wide">邮箱</th>
+            <th class="col-parsed col-wide">应聘职位</th>
+            <th class="col-parsed">学历</th>
+            <th class="col-parsed">经验</th>
+            <th class="col-work-exp">工作经历</th>
             <th class="col-time">上传时间</th>
             <th class="col-actions">操作</th>
           </tr>
         </thead>
         <tbody id="fileTableBody">
-          <tr><td colspan="5" class="loading">加载中...</td></tr>
+          <tr><td colspan="10" class="loading">加载中...</td></tr>
         </tbody>
       </table>
     </div>
@@ -67,25 +76,32 @@
     </div>
   </div>
 
+  <!-- 详情模态框 -->
+  <div class="modal-overlay" id="detailModal">
+    <div class="modal-container modal-detail">
+      <div class="modal-header">
+        <span class="modal-title">简历解析详情</span>
+        <button class="modal-close" id="detailClose">&times;</button>
+      </div>
+      <div class="modal-body detail-body" id="detailBody"></div>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 
   <script>
     (function() {
-      const API_BASE = window.location.origin;
-
-      const token = localStorage.getItem('token');
-      const username = localStorage.getItem('username');
-      if (!token) {
-        window.location.href = '/admin/login.html';
-      }
-
+      var API_BASE = window.location.origin;
+      var token = localStorage.getItem('token');
+      var username = localStorage.getItem('username');
+      if (!token) { window.location.href = '/admin/login.html'; }
       document.getElementById('displayUsername').textContent = username;
 
-      // ====== 全局状态 ======
       var allFiles = [];
       var searchKeyword = '';
+      var parsingFileIds = new Set();
+      var editingCell = null;  // { td, fileId, field, originalValue }
 
-      // ====== 元素引用 ======
       var uploadArea = document.getElementById('uploadArea');
       var fileInput = document.getElementById('fileInput');
       var uploadProgress = document.getElementById('uploadProgress');
@@ -98,24 +114,23 @@
       var previewTitle = document.getElementById('previewTitle');
       var modalDownload = document.getElementById('modalDownload');
       var modalClose = document.getElementById('modalClose');
+      var detailModal = document.getElementById('detailModal');
+      var detailBody = document.getElementById('detailBody');
 
-      // ====== Toast ======
       function showToast(msg, isError) {
-        toast.textContent = msg;
-        toast.className = 'toast';
+        toast.textContent = msg; toast.className = 'toast';
         if (isError) toast.classList.add('error');
         toast.classList.add('show');
         setTimeout(function() { toast.classList.remove('show'); }, 3000);
       }
 
-      // ====== 转义 HTML ======
       function escapeHtml(str) {
+        if (!str) return '';
         var div = document.createElement('div');
-        div.textContent = str;
+        div.textContent = String(str);
         return div.innerHTML;
       }
 
-      // ====== 时间格式化 ======
       function formatTime(dateStr) {
         if (!dateStr) return '-';
         var d = new Date(dateStr.replace(' ', 'T'));
@@ -123,30 +138,23 @@
         return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
       }
 
-      // ====== 退出 ======
       function logout() {
         if (!confirm('确定要退出登录吗？')) return;
-        localStorage.removeItem('token');
-        localStorage.removeItem('username');
+        localStorage.removeItem('token'); localStorage.removeItem('username');
         window.location.href = '/admin/login.html';
       }
 
-      // ====== 上传文件 ======
       async function doUpload(file) {
         if (!file) return;
-
         if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
-          showToast('仅支持 PDF 文件格式', true);
-          return;
+          showToast('仅支持 PDF 文件格式', true); return;
         }
-
         if (file.size > 10 * 1024 * 1024) {
-          showToast('文件大小不能超过 10MB', true);
-          return;
+          showToast('文件大小不能超过 10MB', true); return;
         }
 
         uploadProgress.textContent = '正在上传: ' + file.name + '...';
-        uploadProgress.classList.add('show');
+        uploadProgress.className = 'upload-progress show';
 
         var formData = new FormData();
         formData.append('file', file);
@@ -157,127 +165,287 @@
             headers: { 'Authorization': 'Bearer ' + token },
             body: formData,
           });
-
           var data = await res.json();
-
           if (data.code === 200) {
-            uploadProgress.textContent = '上传成功: ' + data.data.fileName;
-            showToast('文件上传成功');
-            loadFiles();
+            var newFileId = data.data.fileId;
+            parsingFileIds.add(String(newFileId));
+            uploadProgress.textContent = '上传成功，正在解析简历...';
+            uploadProgress.className = 'upload-progress show parsing';
+            showToast('文件上传成功，开始解析简历');
+
+            // 立即刷新列表，显示解析中状态
+            await loadFiles();
+
+            // 轮询等待解析完成
+            var maxPoll = 30;
+            var polled = 0;
+            while (polled < maxPoll) {
+              await new Promise(function(r) { setTimeout(r, 2000); });
+              polled++;
+              await loadFiles();
+              // 检查这个文件是否已经有解析数据
+              var f = allFiles.find(function(x) { return x.fileId == newFileId; });
+              if (f && f.parsed) {
+                parsingFileIds.delete(String(newFileId));
+                uploadProgress.textContent = '简历解析完成: ' + file.name;
+                uploadProgress.className = 'upload-progress show';
+                showToast('简历解析完成');
+                break;
+              }
+            }
+            if (polled >= maxPoll) {
+              parsingFileIds.delete(String(newFileId));
+              uploadProgress.textContent = '解析超时，可稍后手动解析';
+              uploadProgress.className = 'upload-progress show';
+            }
           } else {
-            uploadProgress.classList.remove('show');
             showToast(data.message || '上传失败', true);
           }
         } catch (err) {
-          uploadProgress.classList.remove('show');
           showToast('上传失败: ' + err.message, true);
         }
-
         fileInput.value = '';
-
-        setTimeout(function() {
-          uploadProgress.classList.remove('show');
-        }, 3000);
+        setTimeout(function() { uploadProgress.classList.remove('show'); }, 5000);
       }
 
-      // ====== 加载文件列表 ======
       async function loadFiles() {
-        fileTableBody.innerHTML = '<tr><td colspan="5" class="loading">加载中...</td></tr>';
-
+        fileTableBody.innerHTML = '<tr><td colspan="10" class="loading">加载中...</td></tr>';
         try {
           var res = await fetch(API_BASE + '/api/files/list', {
             headers: { 'Authorization': 'Bearer ' + token },
           });
-
           var data = await res.json();
-
           if (data.code !== 200) {
-            fileTableBody.innerHTML = '<tr><td colspan="5" class="loading">加载失败</td></tr>';
+            fileTableBody.innerHTML = '<tr><td colspan="10" class="loading">加载失败</td></tr>';
             return;
           }
-
           allFiles = data.data.files;
           renderTable();
-
         } catch (err) {
-          fileTableBody.innerHTML = '<tr><td colspan="5" class="loading">加载失败: ' + escapeHtml(err.message) + '</td></tr>';
+          fileTableBody.innerHTML = '<tr><td colspan="10" class="loading">加载失败: ' + escapeHtml(err.message) + '</td></tr>';
         }
       }
 
-      // ====== 渲染表格 ======
+      function getCellVal(parsed, key) {
+        return (parsed && parsed[key]) ? escapeHtml(parsed[key]) : '';
+      }
+
+      function cellHtml(p, isParsing, fileId, field, value) {
+        if (isParsing) {
+          return '<td class="col-parsed"><span class="parsing-dots"><span>●</span><span>●</span><span>●</span></span></td>';
+        }
+        var cls = 'col-parsed';
+        var escaped = value ? escapeHtml(value) : '';
+        if (p) cls += ' editable';
+        return '<td class="' + cls + '" data-field="' + field + '" data-id="' + fileId + '" data-value="' + escaped + '">' + escaped + '</td>';
+      }
+
       function renderTable() {
         var files = allFiles;
-
-        // 搜索过滤
         if (searchKeyword) {
+          var kw = searchKeyword;
           files = files.filter(function(f) {
-            return f.fileName.toLowerCase().indexOf(searchKeyword) >= 0;
+            if (f.fileName.toLowerCase().indexOf(kw) >= 0) return true;
+            if (!f.parsed) return false;
+            return ['name','phone','email','target_position','education','city'].some(function(k) {
+              return f.parsed[k] && f.parsed[k].toLowerCase().indexOf(kw) >= 0;
+            });
           });
         }
 
         fileCount.textContent = '共 ' + files.length + ' 个文件';
 
         if (files.length === 0) {
-          if (searchKeyword) {
-            fileTableBody.innerHTML = '<tr><td colspan="5" class="empty-state"><div class="empty-icon">🔍</div><div class="empty-text">没有匹配的文件</div></td></tr>';
-          } else {
-            fileTableBody.innerHTML = '<tr><td colspan="5" class="empty-state"><div class="empty-icon">📂</div><div class="empty-text">暂无上传记录</div></td></tr>';
-          }
+          var icon = searchKeyword ? '🔍' : '📂';
+          var msg = searchKeyword ? '没有匹配的文件' : '暂无上传记录';
+          fileTableBody.innerHTML = '<tr><td colspan="10" class="empty-state"><div class="empty-icon">' + icon + '</div><div class="empty-text">' + msg + '</div></td></tr>';
           return;
         }
 
         var html = '';
         files.forEach(function(f, idx) {
-          var safeName = escapeHtml(f.fileName);
+          var p = f.parsed;
           var fileId = f.fileId;
-          html += '<tr class="file-row" data-id="' + fileId + '" data-name="' + safeName + '">' +
-            '<td class="col-num">' + (idx + 1) + '</td>' +
-            '<td class="col-name">' +
-              '<div class="file-name-cell">' +
-                '<span class="file-type-icon">📄</span>' +
-                '<span class="file-name-text" title="' + safeName + '">' + safeName + '</span>' +
-              '</div>' +
-            '</td>' +
-            '<td class="col-size">' + f.fileSizeReadable + '</td>' +
+          var isParsing = parsingFileIds.has(String(fileId));
+          var rowClass = 'file-row';
+          if (!p && !isParsing) rowClass += ' not-parsed';
+          if (isParsing) rowClass += ' parsing';
+          var safeName = escapeHtml(f.fileName);
+
+          var cells = '';
+          cells += '<td class="col-num">' + (idx + 1) + '</td>';
+          cells += cellHtml(p, isParsing, fileId, 'name', p && p.name);
+          cells += cellHtml(p, isParsing, fileId, 'phone', p && p.phone);
+          cells += cellHtml(p, isParsing, fileId, 'email', p && p.email);
+          cells += cellHtml(p, isParsing, fileId, 'target_position', p && p.target_position);
+          cells += cellHtml(p, isParsing, fileId, 'education', p && p.education);
+          cells += cellHtml(p, isParsing, fileId, 'years_total', p && p.years_total);
+
+          // 工作经历（只读，可展开）
+          var weArr = (p && p.work_experiences) || [];
+          if (isParsing) {
+            cells += '<td class="col-work-exp"><span class="parsing-dots"><span>●</span><span>●</span><span>●</span></span></td>';
+          } else if (weArr.length > 0) {
+            var workId = 'work-' + fileId;
+            var workItems = '';
+            weArr.forEach(function(we) {
+              workItems += '<div class="work-item-inline">' +
+                '<span class="work-company">' + escapeHtml(we.company || '') + '</span>' +
+                '<span class="work-position">' + escapeHtml(we.position || '') + '</span>' +
+                '<span class="work-period">' + escapeHtml(we.period || '') + '</span>' +
+              '</div>';
+            });
+            cells += '<td class="col-work-exp">' +
+              '<div class="work-list" id="' + workId + '" data-expanded="false">' + workItems + '</div>' +
+              '<span class="work-expand-btn" data-work-id="' + workId + '">展开 ▼</span>' +
+            '</td>';
+          } else {
+            cells += '<td class="col-work-exp"></td>';
+          }
+
+          html += '<tr class="' + rowClass + '" data-id="' + fileId + '" data-name="' + safeName + '">' +
+            cells +
             '<td class="col-time">' + formatTime(f.uploadTime) + '</td>' +
-            '<td class="col-actions">' +
-              '<div class="action-group">' +
-                '<button class="btn btn-ghost btn-sm" data-action="preview" data-id="' + fileId + '" data-name="' + safeName + '">预览</button>' +
-                '<button class="btn btn-ghost btn-sm" data-action="download" data-id="' + fileId + '" data-name="' + safeName + '">下载</button>' +
-                '<button class="btn btn-danger btn-sm" data-action="delete" data-id="' + fileId + '">删除</button>' +
-              '</div>' +
-            '</td>' +
+            '<td class="col-actions"><div class="action-group">' +
+              '<button class="btn btn-ghost btn-sm" data-action="preview" data-id="' + fileId + '" data-name="' + safeName + '">预览</button>' +
+              (p ? '<button class="btn btn-ghost btn-sm" data-action="detail" data-id="' + fileId + '">详情</button>' :
+               (isParsing ? '<button class="btn btn-ghost btn-sm btn-parse loading">解析中</button>' :
+                '<button class="btn btn-ghost btn-sm btn-parse" data-action="parse" data-id="' + fileId + '">解析</button>')) +
+              '<button class="btn btn-ghost btn-sm" data-action="download" data-id="' + fileId + '" data-name="' + safeName + '">下载</button>' +
+              '<button class="btn btn-danger btn-sm" data-action="delete" data-id="' + fileId + '">删除</button>' +
+            '</div></td>' +
           '</tr>';
         });
         fileTableBody.innerHTML = html;
       }
 
-      // ====== 搜索 ======
       searchBox.addEventListener('input', function() {
         searchKeyword = searchBox.value.trim().toLowerCase();
         renderTable();
       });
 
-      // ====== 表格操作（事件委托） ======
       fileTableBody.addEventListener('click', function(e) {
+        // 优先处理按钮点击
         var btn = e.target.closest('button');
-        if (!btn) return;
+        if (btn) {
+          var action = btn.getAttribute('data-action');
+          var fileId = btn.getAttribute('data-id');
+          var fileName = btn.getAttribute('data-name');
 
-        var action = btn.getAttribute('data-action');
-        var fileId = btn.getAttribute('data-id');
-        var fileName = btn.getAttribute('data-name');
-
-        if (action === 'preview') {
-          openPreview(fileId, fileName);
-        } else if (action === 'download') {
-          downloadFile(fileId, fileName);
-        } else if (action === 'delete') {
-          if (!confirm('确定要删除「' + fileName + '」吗？')) return;
-          deleteFileItem(fileId);
+          if (action === 'preview') openPreview(fileId, fileName);
+          else if (action === 'download') downloadFile(fileId, fileName);
+          else if (action === 'detail') openDetail(fileId, fileName);
+          else if (action === 'parse') triggerParse(fileId);
+          else if (action === 'delete') {
+            if (!confirm('确定要删除「' + fileName + '」吗？')) return;
+            deleteFileItem(fileId);
+          }
+          return;
         }
+
+        // 工作经历展开/收起
+        var expandBtn = e.target.closest('.work-expand-btn');
+        if (expandBtn) {
+          var workId = expandBtn.getAttribute('data-work-id');
+          var list = document.getElementById(workId);
+          if (!list) return;
+          var isExpanded = list.getAttribute('data-expanded') === 'true';
+          if (isExpanded) {
+            list.classList.remove('expanded');
+            list.setAttribute('data-expanded', 'false');
+            expandBtn.textContent = '展开 ▼';
+          } else {
+            list.classList.add('expanded');
+            list.setAttribute('data-expanded', 'true');
+            expandBtn.textContent = '收起 ▲';
+          }
+          return;
+        }
+
+        // 处理可编辑单元格点击
+        var td = e.target.closest('.col-parsed.editable');
+        if (!td) return;
+        if (editingCell && editingCell.td === td) return; // 已经在编辑
+        startEdit(td);
       });
 
-      // ====== 预览模态框 ======
+      // ====== 内联编辑 ======
+      function startEdit(td) {
+        // 如果之前有编辑中的，先取消
+        if (editingCell) cancelEdit();
+
+        var originalValue = td.getAttribute('data-value') || '';
+        var fileId = td.getAttribute('data-id');
+        var field = td.getAttribute('data-field');
+
+        var input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'inline-edit-input';
+        input.value = originalValue;
+        td.innerHTML = '';
+        td.appendChild(input);
+        input.focus();
+        input.select();
+
+        editingCell = { td: td, fileId: fileId, field: field, originalValue: originalValue, input: input };
+
+        input.addEventListener('blur', function() { saveEdit(); });
+        input.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') { e.preventDefault(); saveEdit(); }
+          else if (e.key === 'Escape') { e.preventDefault(); cancelEdit(); }
+        });
+      }
+
+      async function saveEdit() {
+        if (!editingCell) return;
+        var ctx = editingCell;
+        var newValue = ctx.input.value.trim();
+
+        // 值没变，直接恢复
+        if (newValue === ctx.originalValue) {
+          cancelEdit();
+          return;
+        }
+
+        // 禁用输入框
+        ctx.input.disabled = true;
+
+        try {
+          var res = await fetch(API_BASE + '/api/resume/' + ctx.fileId, {
+            method: 'PUT',
+            headers: {
+              'Authorization': 'Bearer ' + token,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ field: ctx.field, value: newValue }),
+          });
+          var data = await res.json();
+          if (data.code === 200) {
+            // 更新本地数据
+            var f = allFiles.find(function(x) { return x.fileId == ctx.fileId; });
+            if (f && f.parsed) {
+              f.parsed[ctx.field] = newValue || '';
+            }
+            ctx.td.setAttribute('data-value', escapeHtml(newValue));
+            ctx.td.textContent = newValue;
+            showToast(ctx.field + ' 已更新');
+          } else {
+            showToast(data.message || '保存失败', true);
+            ctx.td.textContent = ctx.originalValue;
+          }
+        } catch (err) {
+          showToast('保存失败: ' + err.message, true);
+          ctx.td.textContent = ctx.originalValue;
+        }
+        editingCell = null;
+      }
+
+      function cancelEdit() {
+        if (!editingCell) return;
+        editingCell.td.textContent = editingCell.originalValue;
+        editingCell = null;
+      }
+
       function openPreview(fileId, fileName) {
         var url = API_BASE + '/api/files/' + fileId + '/download?preview=1&token=' + encodeURIComponent(token);
         previewFrame.src = url;
@@ -295,87 +463,138 @@
       }
 
       modalClose.addEventListener('click', closePreview);
-      previewModal.addEventListener('click', function(e) {
-        if (e.target === previewModal) closePreview();
-      });
+      previewModal.addEventListener('click', function(e) { if (e.target === previewModal) closePreview(); });
       document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && previewModal.classList.contains('show')) closePreview();
+        if (e.key === 'Escape') {
+          if (editingCell) { cancelEdit(); return; }
+          closePreview();
+          closeDetail();
+        }
       });
 
-      // 模态框下载按钮
       modalDownload.addEventListener('click', function() {
-        var fileId = modalDownload.getAttribute('data-id');
-        var fileName = modalDownload.getAttribute('data-name');
-        downloadFile(fileId, fileName);
+        downloadFile(modalDownload.getAttribute('data-id'), modalDownload.getAttribute('data-name'));
       });
 
-      // ====== 下载 ======
+      // ====== 详情模态框 ======
+      function openDetail(fileId, fileName) {
+        var file = allFiles.find(function(f) { return f.fileId == fileId; });
+        if (!file || !file.parsed) return;
+
+        var p = file.parsed;
+        var html = '<div class="detail-grid">' +
+          '<div class="detail-section"><h3>基本信息</h3>' +
+            renderDetailRow('姓名', p.name) +
+            renderDetailRow('性别', p.gender) +
+            renderDetailRow('年龄', p.age) +
+            renderDetailRow('学历', p.education) +
+            renderDetailRow('城市', p.city) +
+          '</div>' +
+          '<div class="detail-section"><h3>联系方式</h3>' +
+            renderDetailRow('手机', p.phone) +
+            renderDetailRow('邮箱', p.email) +
+          '</div>' +
+          '<div class="detail-section"><h3>职业信息</h3>' +
+            renderDetailRow('应聘职位', p.target_position) +
+            renderDetailRow('工作经验', p.years_total ? p.years_total + ' 年' : '') +
+          '</div>';
+
+        if (p.work_experiences && p.work_experiences.length > 0) {
+          html += '<div class="detail-section detail-full"><h3>工作经历</h3>';
+          p.work_experiences.forEach(function(we) {
+            html += '<div class="work-item">' +
+              '<span class="work-company">' + escapeHtml(we.company) + '</span>' +
+              '<span class="work-position">' + escapeHtml(we.position) + '</span>' +
+              '<span class="work-period">' + escapeHtml(we.period) + '</span>' +
+            '</div>';
+          });
+          html += '</div>';
+        }
+
+        if (p.source_channel || p.hr_name || p.reviewer) {
+          html += '<div class="detail-section"><h3>来源信息</h3>' +
+            renderDetailRow('来源渠道', p.source_channel) +
+            renderDetailRow('招聘HR', p.hr_name) +
+            renderDetailRow('筛选人', p.reviewer) +
+          '</div>';
+        }
+
+        html += '</div>';
+        detailBody.innerHTML = html;
+        detailModal.classList.add('show');
+        document.body.style.overflow = 'hidden';
+      }
+
+      function renderDetailRow(label, value) {
+        if (!value) return '';
+        return '<div class="detail-row"><span class="detail-label">' + escapeHtml(label) + '：</span><span class="detail-value">' + escapeHtml(value) + '</span></div>';
+      }
+
+      function closeDetail() {
+        detailModal.classList.remove('show');
+        if (!previewModal.classList.contains('show')) document.body.style.overflow = '';
+      }
+
+      document.getElementById('detailClose').addEventListener('click', closeDetail);
+      detailModal.addEventListener('click', function(e) { if (e.target === detailModal) closeDetail(); });
+
+      // ====== 手动触发解析 ======
+      async function triggerParse(fileId) {
+        if (parsingFileIds.has(String(fileId))) return;
+        parsingFileIds.add(String(fileId));
+        renderTable();
+        showToast('正在解析简历...');
+        try {
+          var res = await fetch(API_BASE + '/api/resume/parse/' + fileId, {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + token },
+          });
+          var data = await res.json();
+          if (data.code === 200) {
+            showToast('解析完成');
+          } else {
+            showToast(data.message || '解析失败', true);
+          }
+        } catch (err) {
+          showToast('解析失败: ' + err.message, true);
+        }
+        parsingFileIds.delete(String(fileId));
+        loadFiles();
+      }
+
       async function downloadFile(fileId, fileName) {
         try {
           var res = await fetch(API_BASE + '/api/files/' + fileId + '/download', {
             headers: { 'Authorization': 'Bearer ' + token },
           });
-
-          if (!res.ok) {
-            showToast('下载失败', true);
-            return;
-          }
-
+          if (!res.ok) { showToast('下载失败', true); return; }
           var blob = await res.blob();
           var url = URL.createObjectURL(blob);
           var a = document.createElement('a');
-          a.href = url;
-          a.download = fileName;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-        } catch (err) {
-          showToast('下载失败: ' + err.message, true);
-        }
+          a.href = url; a.download = fileName;
+          document.body.appendChild(a); a.click();
+          document.body.removeChild(a); URL.revokeObjectURL(url);
+        } catch (err) { showToast('下载失败: ' + err.message, true); }
       }
 
-      // ====== 删除 ======
       async function deleteFileItem(fileId) {
         try {
           var res = await fetch(API_BASE + '/api/files/' + fileId, {
             method: 'DELETE',
             headers: { 'Authorization': 'Bearer ' + token },
           });
-
           var data = await res.json();
-
-          if (data.code === 200) {
-            showToast('文件已删除');
-            loadFiles();
-          } else {
-            showToast(data.message || '删除失败', true);
-          }
-        } catch (err) {
-          showToast('删除失败: ' + err.message, true);
-        }
+          if (data.code === 200) { showToast('文件已删除'); loadFiles(); }
+          else { showToast(data.message || '删除失败', true); }
+        } catch (err) { showToast('删除失败: ' + err.message, true); }
       }
 
-      // ====== 事件绑定 ======
-      uploadArea.addEventListener('click', function() {
-        fileInput.click();
-      });
-
-      fileInput.addEventListener('change', function() {
-        if (fileInput.files[0]) doUpload(fileInput.files[0]);
-      });
-
+      uploadArea.addEventListener('click', function() { fileInput.click(); });
+      fileInput.addEventListener('change', function() { if (fileInput.files[0]) doUpload(fileInput.files[0]); });
       document.getElementById('btnLogout').addEventListener('click', logout);
 
-      uploadArea.addEventListener('dragover', function(e) {
-        e.preventDefault();
-        uploadArea.classList.add('drag-over');
-      });
-
-      uploadArea.addEventListener('dragleave', function() {
-        uploadArea.classList.remove('drag-over');
-      });
-
+      uploadArea.addEventListener('dragover', function(e) { e.preventDefault(); uploadArea.classList.add('drag-over'); });
+      uploadArea.addEventListener('dragleave', function() { uploadArea.classList.remove('drag-over'); });
       uploadArea.addEventListener('drop', function(e) {
         e.preventDefault();
         uploadArea.classList.remove('drag-over');

@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  pdf-upload:
+    build: .
+    container_name: pdf-upload-service
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+      - ./uploads:/app/uploads
+    env_file:
+      - .env.production

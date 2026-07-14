@@ -6,6 +6,7 @@ const path = require('path');
 
 const authRoutes = require('./routes/auth');
 const fileRoutes = require('./routes/files');
+const resumeRoutes = require('./routes/resume');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -17,6 +18,7 @@ app.use(express.json());
 // API 路由
 app.use('/api/auth', authRoutes);
 app.use('/api/files', fileRoutes);
+app.use('/api/resume', resumeRoutes);
 
 // 管理后台静态文件
 app.use('/admin', express.static(path.join(__dirname, 'admin')));
