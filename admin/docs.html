@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>使用文档 - PDF 简历管理系统</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .docs-page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .docs-container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 40px 24px 60px;
+      flex: 1;
+      width: 100%;
+    }
+
+    /* Hero */
+    .docs-hero {
+      text-align: center;
+      padding: 48px 20px 32px;
+      background: linear-gradient(135deg, #4f46e5 0%, #6366f1 40%, #818cf8 100%);
+      color: #fff;
+      border-radius: var(--radius-lg);
+      margin-bottom: 40px;
+      position: relative;
+      overflow: hidden;
+    }
+    .docs-hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 30% 40%, rgba(255,255,255,.1) 0%, transparent 60%);
+    }
+    .docs-hero > * { position: relative; z-index: 1; }
+    .docs-hero h1 { font-size: 32px; font-weight: 700; margin-bottom: 8px; }
+    .docs-hero p  { font-size: 16px; opacity: .8; margin-bottom: 24px; }
+    .docs-hero .hero-btns {
+      display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+    }
+    .hero-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 10px 24px; border-radius: var(--radius); font-size: 14px;
+      font-weight: 500; text-decoration: none; transition: all .2s;
+    }
+    .hero-btn-primary {
+      background: #fff; color: #4f46e5;
+    }
+    .hero-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+    .hero-btn-ghost {
+      border: 1px solid rgba(255,255,255,.4); color: #fff;
+    }
+    .hero-btn-ghost:hover { background: rgba(255,255,255,.1); }
+
+    /* Sections */
+    .docs-section {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      padding: 28px 32px;
+      margin-bottom: 20px;
+    }
+    .docs-section h2 {
+      font-size: 20px; font-weight: 600; color: var(--text);
+      margin-bottom: 4px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .docs-section h3 {
+      font-size: 16px; font-weight: 600; color: var(--text);
+      margin: 24px 0 10px;
+    }
+    .docs-section h3:first-of-type { margin-top: 16px; }
+    .docs-section p {
+      font-size: 14px; line-height: 1.8; color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+
+    /* Steps */
+    .step-list { counter-reset: step; list-style: none; padding: 0; margin: 16px 0; }
+    .step-list li {
+      counter-increment: step;
+      display: flex; align-items: flex-start; gap: 14px;
+      padding: 14px 0; border-bottom: 1px solid #f0f0f0;
+    }
+    .step-list li:last-child { border-bottom: none; }
+    .step-num {
+      flex-shrink: 0; width: 32px; height: 32px;
+      background: var(--primary); color: #fff; font-size: 13px; font-weight: 600;
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    }
+    .step-body { flex: 1; }
+    .step-body .step-title {
+      font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px;
+    }
+    .step-body .step-desc {
+      font-size: 13px; color: var(--text-secondary); line-height: 1.7;
+    }
+
+    /* Code / path */
+    code.inline {
+      background: #f0f2ff; color: var(--primary); font-size: 13px;
+      padding: 2px 7px; border-radius: 4px; font-family: 'SF Mono',Menlo,monospace;
+    }
+
+    /* Feature cards */
+    .feature-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px; margin: 16px 0;
+    }
+    .feature-card {
+      background: var(--bg); border-radius: var(--radius);
+      padding: 18px; text-align: center;
+    }
+    .feature-card .fc-icon { font-size: 28px; margin-bottom: 8px; }
+    .feature-card .fc-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+    .feature-card .fc-desc { font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+
+    /* Table of contents */
+    .toc {
+      background: var(--bg); border-radius: var(--radius); padding: 16px 20px;
+      margin-bottom: 20px;
+    }
+    .toc-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 10px; }
+    .toc-list { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 24px; }
+    .toc-list a { font-size: 13px; color: var(--primary); text-decoration: none; }
+    .toc-list a:hover { text-decoration: underline; }
+
+    /* Image placeholder */
+    .docs-img {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px; text-align: center;
+      color: var(--text-muted); font-size: 13px; margin: 16px 0;
+    }
+
+    /* Notice */
+    .docs-notice {
+      background: #fff8e1; border: 1px solid #ffe082;
+      border-radius: var(--radius); padding: 14px 18px; margin: 16px 0;
+      font-size: 13px; color: #8d6e00; line-height: 1.7;
+    }
+    .docs-notice strong { color: #e65100; }
+
+    @media (max-width: 640px) {
+      .docs-container { padding: 20px 14px 40px; }
+      .docs-section { padding: 20px 16px; }
+      .docs-hero { padding: 36px 16px 24px; }
+      .docs-hero h1 { font-size: 24px; }
+    }
+  </style>
+</head>
+<body class="docs-page">
+
+  <!-- 顶部导航 -->
+  <div class="topbar">
+    <div class="topbar-bg"></div>
+    <div class="server-section">
+      <div class="brand-logo">
+        <svg class="brand-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="4" y="2" width="24" height="28" rx="3" fill="white" fill-opacity="0.2"/>
+          <rect x="7" y="7" width="18" height="2" rx="1" fill="white" fill-opacity="0.8"/>
+          <rect x="7" y="12" width="14" height="2" rx="1" fill="white" fill-opacity="0.6"/>
+          <rect x="7" y="17" width="16" height="2" rx="1" fill="white" fill-opacity="0.6"/>
+          <rect x="7" y="22" width="10" height="2" rx="1" fill="white" fill-opacity="0.6"/>
+        </svg>
+        <div class="brand-text">
+          <span class="brand-name">PDF 简历管理系统</span>
+          <span class="brand-sub">使用文档</span>
+        </div>
+      </div>
+    </div>
+    <div class="user-info">
+      <a class="topbar-nav-link" href="/admin">管理后台</a>
+      <a class="topbar-nav-link" href="/download/chrome-resume-plugin.zip" download>下载插件</a>
+    </div>
+  </div>
+
+  <div class="docs-container">
+
+    <!-- Hero -->
+    <div class="docs-hero">
+      <h1>PDF 简历智能管理系统</h1>
+      <p>一键上传 PDF 简历，AI 自动解析为结构化数据，高效管理人才库</p>
+      <div class="hero-btns">
+        <a href="/download/chrome-resume-plugin.zip" class="hero-btn hero-btn-primary" download>下载 Chrome 插件</a>
+        <a href="/admin" class="hero-btn hero-btn-ghost">进入管理后台</a>
+      </div>
+    </div>
+
+    <!-- 目录 -->
+    <div class="toc">
+      <div class="toc-title">目录</div>
+      <ul class="toc-list">
+        <li><a href="#overview">产品简介</a></li>
+        <li><a href="#install">插件安装</a></li>
+        <li><a href="#plugin-usage">插件使用</a></li>
+        <li><a href="#admin-login">管理后台</a></li>
+        <li><a href="#features">功能一览</a></li>
+        <li><a href="#faq">常见问题</a></li>
+      </ul>
+    </div>
+
+    <!-- 产品简介 -->
+    <div class="docs-section" id="overview">
+      <h2>产品简介</h2>
+      <p>PDF 简历智能管理系统是一套完整的简历收集、解析和管理解决方案，由<strong>Chrome 浏览器插件</strong>和<strong>Web 管理后台</strong>两部分组成。</p>
+      <p>在招聘网站上浏览简历时，通过插件<strong>一键上传 PDF</strong> 到云端服务器，系统会调用 AI（智谱 GLM）自动解析简历内容，提取出姓名、手机、邮箱、应聘职位、学历、经验、工作经历等结构化字段。你可以在管理后台统一查看、搜索、编辑和下载所有简历。</p>
+
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="fc-icon">📤</div>
+          <div class="fc-title">一键上传</div>
+          <div class="fc-desc">在浏览器中随时上传 PDF 简历，无需切换工具</div>
+        </div>
+        <div class="feature-card">
+          <div class="fc-icon">🤖</div>
+          <div class="fc-title">AI 自动解析</div>
+          <div class="fc-desc">智谱 GLM 大模型提取结构化信息，秒出结果</div>
+        </div>
+        <div class="feature-card">
+          <div class="fc-icon">📋</div>
+          <div class="fc-title">集中管理</div>
+          <div class="fc-desc">所有简历汇聚一处，搜索、筛选、编辑、下载</div>
+        </div>
+        <div class="feature-card">
+          <div class="fc-icon">☁️</div>
+          <div class="fc-desc">PDF 文件存储在腾讯云 COS，安全可靠</div>
+          <div class="fc-title">云端存储</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 插件安装 -->
+    <div class="docs-section" id="install">
+      <h2>插件安装</h2>
+
+      <h3>1. 下载插件</h3>
+      <p>点击顶部「下载插件」按钮，或在管理后台右上角点击「下载插件」，获取 <code class="inline">chrome-resume-plugin.zip</code>。</p>
+
+      <h3>2. 解压</h3>
+      <p>将下载的 zip 文件解压到本地任意目录，解压后得到一个 <code class="inline">dist</code> 文件夹。</p>
+
+      <h3>3. 安装到 Chrome</h3>
+      <ol class="step-list">
+        <li>
+          <span class="step-num">1</span>
+          <div class="step-body">
+            <div class="step-title">打开扩展管理页面</div>
+            <div class="step-desc">在 Chrome 地址栏输入 <code class="inline">chrome://extensions/</code> 并回车。</div>
+          </div>
+        </li>
+        <li>
+          <span class="step-num">2</span>
+          <div class="step-body">
+            <div class="step-title">开启开发者模式</div>
+            <div class="step-desc">页面右上角打开「开发者模式」开关。</div>
+          </div>
+        </li>
+        <li>
+          <span class="step-num">3</span>
+          <div class="step-body">
+            <div class="step-title">加载扩展</div>
+            <div class="step-desc">点击「加载已解压的扩展程序」，选择解压后的 <code class="inline">dist</code> 文件夹。</div>
+          </div>
+        </li>
+        <li>
+          <span class="step-num">4</span>
+          <div class="step-body">
+            <div class="step-title">固定到工具栏</div>
+            <div class="step-desc">点击 Chrome 右上角拼图图标，找到「简历收集(本地)」，点击图钉固定到工具栏。</div>
+          </div>
+        </li>
+      </ol>
+    </div>
+
+    <!-- 插件使用 -->
+    <div class="docs-section" id="plugin-usage">
+      <h2>插件使用</h2>
+
+      <h3>登录账户</h3>
+      <p>点击浏览器工具栏中的插件图标，弹出登录面板。首次使用需要<strong>注册账号</strong>（点击底部「没有账号？立即注册」），输入用户名和密码完成注册后即可登录。</p>
+
+      <div class="docs-notice">
+        <strong>注意</strong>：如果使用线上服务器，请将顶部「服务器」下拉框切换为「生产 (43.167.211.80)」，然后再登录/注册。本地测试使用「本地 (localhost:3000)」。
+      </div>
+
+      <h3>上传简历</h3>
+      <ol class="step-list">
+        <li>
+          <span class="step-num">1</span>
+          <div class="step-body">
+            <div class="step-title">打开插件面板</div>
+            <div class="step-desc">点击浏览器工具栏中的插件图标，确认已登录状态。</div>
+          </div>
+        </li>
+        <li>
+          <span class="step-num">2</span>
+          <div class="step-body">
+            <div class="step-title">选择 PDF 文件</div>
+            <div class="step-desc">点击「选择文件」按钮，或在 Mac 上使用快捷键 <code class="inline">⌘+Shift+U</code>（Windows: <code class="inline">Ctrl+Shift+U</code>）触发快速上传。</div>
+          </div>
+        </li>
+        <li>
+          <span class="step-num">3</span>
+          <div class="step-body">
+            <div class="step-title">等待上传完成</div>
+            <div class="step-desc">上传进度条完成后，系统会自动调用 AI 解析简历信息。你可以打开管理后台查看结果。</div>
+          </div>
+        </li>
+      </ol>
+
+      <h3>快捷键</h3>
+      <p>插件支持快捷键上传：<strong>Mac</strong> 使用 <code class="inline">⌘+Shift+U</code>，<strong>Windows</strong> 使用 <code class="inline">Ctrl+Shift+U</code>。在任意页面按下快捷键即可触发文件选择器。</p>
+    </div>
+
+    <!-- 管理后台 -->
+    <div class="docs-section" id="admin-login">
+      <h2>管理后台</h2>
+      <p>管理后台通过浏览器访问：<code class="inline">http://localhost:3000/admin</code>（本地）或 <code class="inline">http://43.167.211.80:3000/admin</code>（线上）。</p>
+
+      <h3>登录后台</h3>
+      <p>使用与插件相同的用户名和密码登录。顶部可以切换连接的服务器（本地 / 生产），切换后会自动跳转到对应环境。</p>
+
+      <h3>文件列表</h3>
+      <p>登录后进入文件管理列表，可以看到所有已上传的 PDF 简历。表格展示以下信息：</p>
+      <p>
+        <strong>序号</strong>、<strong>姓名</strong>、<strong>手机</strong>、<strong>邮箱</strong>、<strong>应聘职位</strong>、<strong>学历</strong>、<strong>工作经验</strong>、<strong>工作经历</strong>、<strong>上传时间</strong>、<strong>操作</strong>
+      </p>
+      <p>其中工作经历列默认显示前两行，点击「展开」可查看全部。</p>
+
+      <h3>搜索</h3>
+      <p>通过顶部的搜索框，可以按文件名、姓名、手机、邮箱、应聘职位、学历等多字段模糊搜索。</p>
+
+      <h3>分页</h3>
+      <p>表格底部支持分页功能，可选择每页显示 10 / 20 / 50 条记录，并配有页码导航。</p>
+
+      <h3>在线编辑</h3>
+      <div class="docs-notice">
+        <strong>提示</strong>：鼠标悬停在手机、邮箱、应聘职位、学历、经验列上，单元格会出现蓝色虚线边框，点击即可直接编辑，修改后自动保存。
+      </div>
+
+      <h3>简历解析</h3>
+      <p>上传的 PDF 文件会自动触发 AI 解析。解析中的文件会显示加载动画，解析完成后自动显示姓名、手机等解析结果。如果解析失败，可以手动点击「解析」按钮重试。</p>
+
+      <h3>预览与下载</h3>
+      <p>每条记录的操作列提供以下功能：</p>
+      <ol class="step-list">
+        <li>
+          <span class="step-num">1</span>
+          <div class="step-body">
+            <div class="step-title">预览</div>
+            <div class="step-desc">点击「预览」弹出模态框，在浏览器中直接查看 PDF 内容，支持翻页浏览。</div>
+          </div>
+        </li>
+        <li>
+          <span class="step-num">2</span>
+          <div class="step-body">
+            <div class="step-title">下载</div>
+            <div class="step-desc">点击「下载」保存 PDF 到本地，文件名自动生成为「姓名_电话_岗位.pdf」的格式，方便归档。</div>
+          </div>
+        </li>
+        <li>
+          <span class="step-num">3</span>
+          <div class="step-body">
+            <div class="step-title">删除</div>
+            <div class="step-desc">点击「删除」移除该条记录，会同时删除云端存储的 PDF 文件（不可恢复）。</div>
+          </div>
+        </li>
+      </ol>
+
+      <h3>上传文件</h3>
+      <p>在管理后台也可以直接上传 PDF 文件：点击页面顶部上传区域的「点击上传或拖拽 PDF 到此处」即可选择文件上传，也支持拖拽文件到该区域。上传后自动解析。</p>
+    </div>
+
+    <!-- 功能一览 -->
+    <div class="docs-section" id="features">
+      <h2>功能一览</h2>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="fc-icon">🔍</div>
+          <div class="fc-title">多维搜索</div>
+          <div class="fc-desc">按文件名、姓名、手机等多字段搜索</div>
+        </div>
+        <div class="feature-card">
+          <div class="fc-icon">✏️</div>
+          <div class="fc-title">内联编辑</div>
+          <div class="fc-desc">鼠标悬停点击即可修改解析结果</div>
+        </div>
+        <div class="feature-card">
+          <div class="fc-icon">📄</div>
+          <div class="fc-title">在线预览</div>
+          <div class="fc-desc">浏览器内嵌 PDF 预览，无需下载</div>
+        </div>
+        <div class="feature-card">
+          <div class="fc-icon">⬇️</div>
+          <div class="fc-desc">一键下载 PDF，文件名自动包含关键信息</div>
+          <div class="fc-title">智能下载</div>
+        </div>
+        <div class="feature-card">
+          <div class="fc-icon">🔐</div>
+          <div class="fc-title">账户安全</div>
+          <div class="fc-desc">JWT Token 认证，登录态持久化</div>
+        </div>
+        <div class="feature-card">
+          <div class="fc-icon">🔄</div>
+          <div class="fc-desc">支持本地开发 / 生产环境一键切换</div>
+          <div class="fc-title">多环境</div>
+        </div>
+        <div class="feature-card">
+          <div class="fc-icon">⌨️</div>
+          <div class="fc-title">快捷键</div>
+          <div class="fc-desc">插件支持快捷键快速上传</div>
+        </div>
+        <div class="feature-card">
+          <div class="fc-icon">📊</div>
+          <div class="fc-desc">智能分页，按需加载，大数据量流畅</div>
+          <div class="fc-title">分页浏览</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FAQ -->
+    <div class="docs-section" id="faq">
+      <h2>常见问题</h2>
+
+      <h3>1. 安装插件后点击图标没有反应？</h3>
+      <p>请在 Chrome 扩展管理页面确认「简历收集(本地)」已启用。如果已经启用，尝试点击右上角刷新按钮，或移除后重新加载。</p>
+
+      <h3>2. 登录失败怎么办？</h3>
+      <p>首先确认选择了正确的服务器。如果是线上服务器，请确保能访问 <code class="inline">http://43.167.211.80:3000</code>。如果忘记密码，目前需要联系管理员重置。</p>
+
+      <h3>3. 上传的文件去哪里了？</h3>
+      <p>PDF 文件存储在腾讯云 COS（对象存储）中，数据库记录关联了文件的存储地址。你可以通过管理后台预览和下载。</p>
+
+      <h3>4. 简历解析失败怎么办？</h3>
+      <p>在管理后台找到对应记录，点击「解析」按钮手动重试。如果多次失败，可能是 PDF 文件过于复杂或包含图片，无法提取文本。</p>
+
+      <h3>5. 解析结果不准确？</h3>
+      <p>可以在管理后台直接点击对应字段进行编辑修改。鼠标悬停在手机、邮箱、职位、学历等列上，点击即可编辑。</p>
+
+      <h3>6. 支持哪些 PDF 格式？</h3>
+      <p>支持标准的文本型 PDF（含中英文）。纯图片扫描版 PDF 需要 OCR 支持，目前暂不支持。</p>
+
+      <h3>7. 如何切换本地和服务器？</h3>
+      <p>插件登录页和管理后台登录页顶部都有「服务器」下拉框，选择后会自动切换。注意切换服务器后需要重新登录。</p>
+    </div>
+
+  </div>
+
+  <!-- 底部 -->
+  <footer class="page-footer">
+    <div class="footer-content">
+      <span class="footer-text">PDF Resume Manager v1.0</span>
+      <span class="footer-dot">·</span>
+      <span class="footer-text">简历智能解析 · 云端安全存储</span>
+    </div>
+  </footer>
+
+</body>
+</html>

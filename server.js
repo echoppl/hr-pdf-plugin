@@ -23,6 +23,9 @@ app.use('/api/resume', resumeRoutes);
 // 管理后台静态文件
 app.use('/admin', express.static(path.join(__dirname, 'admin')));
 
+// 公开下载文件
+app.use('/download', express.static(path.join(__dirname, 'public')));
+
 // 管理后台默认跳转到登录页
 app.get('/admin', (req, res) => {
   res.redirect('/admin/login.html');
