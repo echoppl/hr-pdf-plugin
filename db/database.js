@@ -59,20 +59,46 @@ function initTables() {
       FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE
     );
   `);
+
+  // 兼容旧表：添加 role 列（如果不存在）
+  try {
+    db.exec(`ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'`);
+  } catch (e) {
+    // 列已存在，忽略错误
+  }
 }
 
 // ====== 用户操作 ======
 
 function createUser(username, hashedPassword) {
   const id = uuidv4();
-  const stmt = getDb().prepare('INSERT INTO users (id, username, password) VALUES (?, ?, ?)');
-  stmt.run(id, username, hashedPassword);
-  return { id, username };
+  // 第一个注册的用户自动设为 admin
+  const count = getDb().prepare('SELECT COUNT(*) as cnt FROM users').get();
+  const role = count.cnt === 0 ? 'admin' : 'user';
+  const stmt = getDb().prepare('INSERT INTO users (id, username, password, role) VALUES (?, ?, ?, ?)');
+  stmt.run(id, username, hashedPassword, role);
+  return { id, username, role };
 }
 
 function findUserByUsername(username) {
   const stmt = getDb().prepare('SELECT * FROM users WHERE username = ?');
   return stmt.get(username);
+}
+
+function getAllUsers() {
+  const stmt = getDb().prepare('SELECT id, username, role, created_at FROM users ORDER BY created_at ASC');
+  return stmt.all();
+}
+
+function getUserById(id) {
+  const stmt = getDb().prepare('SELECT id, username, role, created_at FROM users WHERE id = ?');
+  return stmt.get(id);
+}
+
+function updateUserRole(id, role) {
+  const stmt = getDb().prepare('UPDATE users SET role = ? WHERE id = ?');
+  const result = stmt.run(role, id);
+  return result.changes > 0;
 }
 
 // ====== 文件操作 ======
@@ -231,6 +257,9 @@ module.exports = {
   getDb,
   createUser,
   findUserByUsername,
+  getAllUsers,
+  getUserById,
+  updateUserRole,
   createFileRecord,
   getFileById,
   getFilesByUserId,

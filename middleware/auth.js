@@ -16,7 +16,7 @@ function authMiddleware(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // { id, username }
+    req.user = decoded; // { id, username, role }
     next();
   } catch (err) {
     return res.status(401).json({ code: 401, message: '登录已过期，请重新登录' });

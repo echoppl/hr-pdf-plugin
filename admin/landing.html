@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF 简历智能管理系统 - 一键上传，AI 自动解析</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .landing-nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:14px 32px;background:rgba(255,255,255,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+    .nav-brand{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:700;color:var(--text);text-decoration:none}
+    .nav-brand svg{width:26px;height:26px}
+    .nav-links{display:flex;align-items:center;gap:20px}
+    .nav-links a{font-size:14px;color:var(--text-secondary);text-decoration:none;transition:color .2s}
+    .nav-links a:hover{color:var(--primary)}
+    .nav-cta{padding:8px 18px;border-radius:var(--radius);background:linear-gradient(135deg,#4f46e5,#6366f1);color:#fff!important;font-weight:500}
+    .nav-cta:hover{opacity:.9}
+    .hero{position:relative;min-height:88vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:60px 24px;background:linear-gradient(135deg,#4f46e5 0%,#6366f1 45%,#818cf8 100%);overflow:hidden}
+    .hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 20% 30%,rgba(255,255,255,.12) 0%,transparent 55%),radial-gradient(ellipse at 80% 70%,rgba(255,255,255,.08) 0%,transparent 50%)}
+    .hero-content{position:relative;z-index:1;max-width:760px}
+    .hero h1{font-size:48px;font-weight:800;color:#fff;line-height:1.2;margin-bottom:18px;letter-spacing:-.5px}
+    .hero .hero-sub{font-size:20px;color:rgba(255,255,255,.85);margin-bottom:36px;line-height:1.5}
+    .hero-btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+    .hero-btn{display:inline-flex;align-items:center;gap:8px;padding:14px 32px;border-radius:var(--radius);font-size:16px;font-weight:600;text-decoration:none;transition:all .2s}
+    .hero-btn-primary{background:#fff;color:#4f46e5;box-shadow:0 4px 20px rgba(0,0,0,.15)}
+    .hero-btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,.22)}
+    .hero-btn-ghost{border:1.5px solid rgba(255,255,255,.5);color:#fff}
+    .hero-btn-ghost:hover{background:rgba(255,255,255,.12);border-color:#fff}
+    .section{padding:72px 24px;max-width:1080px;margin:0 auto}
+    .section-title{text-align:center;font-size:32px;font-weight:700;color:var(--text);margin-bottom:12px}
+    .section-sub{text-align:center;font-size:16px;color:var(--text-muted);margin-bottom:48px}
+    .feature-row{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+    .feature-card-lg{background:var(--surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);padding:36px 28px;text-align:center;transition:transform .2s,box-shadow .2s}
+    .feature-card-lg:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(79,70,229,.12)}
+    .fc-icon-lg{width:64px;height:64px;margin:0 auto 18px;border-radius:50%;background:linear-gradient(135deg,#eef1ff,#e0e7ff);display:flex;align-items:center;justify-content:center;font-size:30px}
+    .feature-card-lg h3{font-size:20px;font-weight:600;margin-bottom:10px}
+    .feature-card-lg p{font-size:14px;color:var(--text-secondary);line-height:1.7}
+    .compare-section{background:var(--bg)}
+    .compare-wrapper{max-width:880px;margin:0 auto;background:var(--surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+    .compare-row{display:grid;grid-template-columns:1fr 1fr}
+    .compare-col{padding:36px 32px}
+    .compare-col.old{background:#fafafa;border-right:1px solid var(--border)}
+    .compare-col.new{background:linear-gradient(135deg,#f5f3ff,#eef1ff)}
+    .compare-label{display:inline-block;font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;margin-bottom:20px}
+    .compare-label.old{background:#f0f0f0;color:var(--text-muted)}
+    .compare-label.new{background:var(--primary);color:#fff}
+    .compare-col ul{list-style:none;padding:0}
+    .compare-col li{display:flex;align-items:center;gap:10px;padding:10px 0;font-size:15px;color:var(--text-secondary);border-bottom:1px solid rgba(0,0,0,.05)}
+    .compare-col li:last-child{border-bottom:none}
+    .compare-col.old li::before{content:'✗';color:var(--text-muted);font-size:18px}
+    .compare-col.new li::before{content:'✓';color:var(--primary);font-size:18px;font-weight:700}
+    .compare-col.new li{color:var(--text);font-weight:500}
+    .steps-row{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+    .step-card{background:var(--surface);border-radius:var(--radius-lg);box-shadow:var(--shadow);padding:32px 24px;text-align:center}
+    .step-badge{width:48px;height:48px;margin:0 auto 16px;border-radius:50%;background:linear-gradient(135deg,#4f46e5,#818cf8);color:#fff;font-size:22px;font-weight:700;display:flex;align-items:center;justify-content:center}
+    .step-card h3{font-size:17px;font-weight:600;margin-bottom:8px}
+    .step-card p{font-size:14px;color:var(--text-muted)}
+    .step-time{display:inline-block;margin-top:12px;font-size:12px;color:var(--primary);background:var(--primary-light);padding:4px 12px;border-radius:20px}
+    .security-section{background:linear-gradient(135deg,#1e1b4b 0%,#312e81 100%);padding:64px 24px;text-align:center}
+    .security-section .section-title{color:#fff}
+    .security-section .section-sub{color:rgba(255,255,255,.6)}
+    .security-badges{display:flex;justify-content:center;gap:32px;flex-wrap:wrap;max-width:800px;margin:0 auto}
+    .security-badge{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:var(--radius-lg);padding:18px 28px}
+    .sb-icon{font-size:28px}
+    .sb-text{text-align:left;color:rgba(255,255,255,.9);font-size:14px;font-weight:500}
+    .sb-text small{display:block;font-size:12px;font-weight:400;color:rgba(255,255,255,.55);margin-top:2px}
+    .footer-cta{background:var(--surface);padding:64px 24px;text-align:center}
+    .footer-cta h2{font-size:28px;font-weight:700;color:var(--text);margin-bottom:12px}
+    .footer-cta p{font-size:16px;color:var(--text-secondary);margin-bottom:32px}
+    .footer-cta .hero-btn-primary{font-size:16px;padding:14px 36px}
+    .footer-meta{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);display:flex;justify-content:center;align-items:center;gap:12px;font-size:13px;color:var(--text-muted);flex-wrap:wrap}
+    .footer-meta a{color:var(--primary);text-decoration:none}
+    .footer-meta a:hover{text-decoration:underline}
+    @media(max-width:768px){
+      .landing-nav{padding:12px 16px}.nav-links{gap:12px}.nav-links a:not(.nav-cta){display:none}
+      .hero{min-height:70vh;padding:40px 20px}.hero h1{font-size:32px}.hero .hero-sub{font-size:16px}
+      .hero-btn{padding:12px 24px;font-size:14px}
+      .section{padding:48px 16px}.section-title{font-size:24px}
+      .feature-row,.steps-row{grid-template-columns:1fr}
+      .compare-row{grid-template-columns:1fr}.compare-col.old{border-right:none;border-bottom:1px solid var(--border)}
+      .security-badge{padding:14px 20px}
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 简单导航条 -->
+  <nav class="landing-nav">
+    <a href="/admin/landing.html" class="nav-brand">
+      <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="4" y="2" width="24" height="28" rx="3" fill="#4f46e5"/>
+        <rect x="7" y="7" width="18" height="2" rx="1" fill="white" fill-opacity="0.9"/>
+        <rect x="7" y="12" width="14" height="2" rx="1" fill="white" fill-opacity="0.7"/>
+        <rect x="7" y="17" width="16" height="2" rx="1" fill="white" fill-opacity="0.7"/>
+        <rect x="7" y="22" width="10" height="2" rx="1" fill="white" fill-opacity="0.7"/>
+      </svg>
+      PDF 简历管理系统
+    </a>
+    <div class="nav-links">
+      <a href="#features">核心功能</a>
+      <a href="#compare">效率对比</a>
+      <a href="#steps">快速上手</a>
+      <a href="/admin">管理后台</a>
+      <a href="/download/chrome-resume-plugin.zip" download class="nav-cta">免费下载插件</a>
+    </div>
+  </nav>
+
+  <!-- Hero 区域 -->
+  <section class="hero">
+    <div class="hero-content">
+      <h1>PDF 简历智能管理系统</h1>
+      <p class="hero-sub">一键上传，AI 秒级解析，让简历管理从此轻松高效</p>
+      <div class="hero-btns">
+        <a href="/download/chrome-resume-plugin.zip" download class="hero-btn hero-btn-primary">免费下载插件</a>
+        <a href="/admin" class="hero-btn hero-btn-ghost">查看演示</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- 核心功能 -->
+  <section class="section" id="features">
+    <h2 class="section-title">三大核心能力</h2>
+    <p class="section-sub">从上传到管理，全流程智能化</p>
+    <div class="feature-row">
+      <div class="feature-card-lg">
+        <div class="fc-icon-lg">📤</div>
+        <h3>一键上传</h3>
+        <p>浏览器内直接上传 PDF 简历，支持快捷键 ⌘+Shift+U，无需切换工具</p>
+      </div>
+      <div class="feature-card-lg">
+        <div class="fc-icon-lg">🤖</div>
+        <h3>AI 智能解析</h3>
+        <p>大模型自动提取姓名、联系方式、学历、工作经历等 10+ 关键字段</p>
+      </div>
+      <div class="feature-card-lg">
+        <div class="fc-icon-lg">☁️</div>
+        <h3>云端管理</h3>
+        <p>集中查阅、搜索、编辑、导出，数据安全可靠，随时随地访问</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 对比区域 -->
+  <section class="section compare-section" id="compare">
+    <h2 class="section-title">传统方式 vs 本产品</h2>
+    <p class="section-sub">效率提升，一目了然</p>
+    <div class="compare-wrapper">
+      <div class="compare-row">
+        <div class="compare-col old">
+          <span class="compare-label old">传统方式</span>
+          <ul>
+            <li>手动逐份录入简历信息</li>
+            <li>Excel 整理，容易遗漏出错</li>
+            <li>邮件来回查找原始文件</li>
+            <li>难以快速检索特定候选人</li>
+          </ul>
+        </div>
+        <div class="compare-col new">
+          <span class="compare-label new">本产品</span>
+          <ul>
+            <li>一键上传，自动归档</li>
+            <li>AI 秒级解析，结构化存储</li>
+            <li>云端集中管理，随时调阅</li>
+            <li>多字段搜索，精准定位</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 快速上手 -->
+  <section class="section" id="steps">
+    <h2 class="section-title">三步快速上手</h2>
+    <p class="section-sub">2 分钟安装，即刻开始智能管理</p>
+    <div class="steps-row">
+      <div class="step-card">
+        <div class="step-badge">①</div>
+        <h3>下载安装插件</h3>
+        <p>下载 zip 包，解压后加载到 Chrome 扩展</p>
+        <span class="step-time">约 2 分钟</span>
+      </div>
+      <div class="step-card">
+        <div class="step-badge">②</div>
+        <h3>注册账号登录</h3>
+        <p>在插件中注册账户，一键登录即可使用</p>
+        <span class="step-time">约 30 秒</span>
+      </div>
+      <div class="step-card">
+        <div class="step-badge">③</div>
+        <h3>上传简历</h3>
+        <p>选择 PDF 文件，AI 自动解析完成</p>
+        <span class="step-time">自动完成</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 数据安全 -->
+  <section class="security-section">
+    <h2 class="section-title">数据安全有保障</h2>
+    <p class="section-sub">企业级安全方案，守护每一份简历</p>
+    <div class="security-badges">
+      <div class="security-badge">
+        <span class="sb-icon">☁️</span>
+        <div class="sb-text">云端对象存储<small>文件加密保存，高可用</small></div>
+      </div>
+      <div class="security-badge">
+        <span class="sb-icon">🔐</span>
+        <div class="sb-text">安全认证<small>登录鉴权，会话保护</small></div>
+      </div>
+      <div class="security-badge">
+        <span class="sb-icon">🛡️</span>
+        <div class="sb-text">数据隔离<small>账户间数据互不可见</small></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer CTA -->
+  <section class="footer-cta">
+    <h2>立即开始，让简历管理更高效</h2>
+    <p>免费下载插件，2 分钟即可上手</p>
+    <a href="/download/chrome-resume-plugin.zip" download class="hero-btn hero-btn-primary">免费下载插件</a>
+    <div class="footer-meta">
+      <span>PDF Resume Manager v1.0</span><span>·</span>
+      <a href="/admin">进入管理后台</a><span>·</span>
+      <span>简历智能解析 · 云端安全存储</span>
+    </div>
+  </section>
+
+</body>
+</html>

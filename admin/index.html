@@ -23,13 +23,14 @@
           <span class="brand-sub">简历解析 · 云端存储</span>
         </div>
       </div>
-      <span class="server-label">服务器:</span>
-      <select class="server-selector" id="serverSelector">
+      <span class="server-label" id="serverLabel" style="display:none;">服务器:</span>
+      <select class="server-selector" id="serverSelector" style="display:none;">
         <option value="http://localhost:3000">本地 (localhost:3000)</option>
         <option value="http://43.167.211.80:3000">生产 (43.167.211.80)</option>
       </select>
     </div>
     <div class="user-info">
+      <a class="topbar-nav-link" id="adminUsersLink" href="/admin/users.html" style="display:none;">用户管理</a>
       <a class="topbar-nav-link" href="/admin/docs.html" target="_blank">使用文档</a>
       <a class="topbar-nav-link" href="/download/chrome-resume-plugin.zip" download>下载插件</a>
       <span id="displayUsername"></span>
@@ -161,6 +162,27 @@
       var username = localStorage.getItem('username');
       if (!token) { window.location.href = '/admin/login.html'; }
       document.getElementById('displayUsername').textContent = username;
+
+      // 检查管理员角色
+      var isAdmin = false;
+      var adminUsersLink = document.getElementById('adminUsersLink');
+      var serverLabel = document.getElementById('serverLabel');
+      (async function checkAdmin() {
+        try {
+          var res = await fetch(API_BASE + '/api/admin/check', {
+            headers: { 'Authorization': 'Bearer ' + token },
+          });
+          var data = await res.json();
+          if (data.code === 200 && data.data.role === 'admin') {
+            isAdmin = true;
+            adminUsersLink.style.display = '';
+            if (serverLabel) serverLabel.style.display = '';
+            if (serverSelector) serverSelector.style.display = '';
+          }
+        } catch (err) {
+          // 静默处理，非 admin 保持隐藏
+        }
+      })();
 
       var allFiles = [];
       var filteredFiles = [];
