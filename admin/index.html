@@ -8,7 +8,27 @@
 </head>
 <body class="admin-page">
   <div class="topbar">
-    <div class="brand">PDF 文件管理</div>
+    <div class="topbar-bg"></div>
+    <div class="server-section">
+      <div class="brand-logo">
+        <svg class="brand-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="4" y="2" width="24" height="28" rx="3" fill="white" fill-opacity="0.2"/>
+          <rect x="7" y="7" width="18" height="2" rx="1" fill="white" fill-opacity="0.8"/>
+          <rect x="7" y="12" width="14" height="2" rx="1" fill="white" fill-opacity="0.6"/>
+          <rect x="7" y="17" width="16" height="2" rx="1" fill="white" fill-opacity="0.6"/>
+          <rect x="7" y="22" width="10" height="2" rx="1" fill="white" fill-opacity="0.6"/>
+        </svg>
+        <div class="brand-text">
+          <span class="brand-name">PDF 文件管理</span>
+          <span class="brand-sub">简历解析 · 云端存储</span>
+        </div>
+      </div>
+      <span class="server-label">服务器:</span>
+      <select class="server-selector" id="serverSelector">
+        <option value="http://localhost:3000">本地 (localhost:3000)</option>
+        <option value="http://43.167.211.80:3000">生产 (43.167.211.80)</option>
+      </select>
+    </div>
     <div class="user-info">
       <span id="displayUsername"></span>
       <button class="btn btn-ghost btn-logout" id="btnLogout">退出登录</button>
@@ -17,9 +37,9 @@
 
   <div class="main-content">
     <div class="upload-area" id="uploadArea">
-      <div class="upload-icon">📄</div>
-      <div class="upload-text">点击上传或拖拽 PDF 文件到此处</div>
-      <div class="upload-hint" id="uploadHint">仅支持 PDF 格式，最大 10MB · 上传后自动解析简历</div>
+      <span class="upload-icon">📄</span>
+      <span class="upload-text">点击上传或拖拽 PDF 到此处</span>
+      <span class="upload-hint" id="uploadHint">PDF · 最大 10MB</span>
       <input type="file" id="fileInput" accept=".pdf,application/pdf">
     </div>
 
@@ -58,7 +78,33 @@
         </tbody>
       </table>
     </div>
+
+    <div class="pagination-bar" id="paginationBar">
+      <div class="pagination-left">
+        <span>每页</span>
+        <select class="page-size-select" id="pageSizeSelect">
+          <option value="10">10 条</option>
+          <option value="20">20 条</option>
+          <option value="50">50 条</option>
+        </select>
+      </div>
+      <div class="pagination-center" id="paginationPages"></div>
+      <div class="pagination-right">
+        <button class="btn-page" id="btnPrev" disabled>上一页</button>
+        <span class="page-info" id="pageInfo"></span>
+        <button class="btn-page" id="btnNext" disabled>下一页</button>
+      </div>
+    </div>
   </div>
+
+  <!-- 底部 -->
+  <footer class="page-footer">
+    <div class="footer-content">
+      <span class="footer-text">PDF Resume Manager v1.0</span>
+      <span class="footer-dot">·</span>
+      <span class="footer-text">简历智能解析 · 云端安全存储</span>
+    </div>
+  </footer>
 
   <!-- 预览模态框 -->
   <div class="modal-overlay" id="previewModal">
@@ -91,16 +137,36 @@
 
   <script>
     (function() {
-      var API_BASE = window.location.origin;
+      // 服务器切换逻辑
+      var savedServer = localStorage.getItem('selectedServer');
+      var API_BASE = savedServer || window.location.origin;
+
+      var serverSelector = document.getElementById('serverSelector');
+      // 同步下拉框初始值
+      if (savedServer) {
+        serverSelector.value = savedServer;
+      }
+      serverSelector.addEventListener('change', function() {
+        var newServer = serverSelector.value;
+        localStorage.setItem('selectedServer', newServer);
+        // 切换服务器时清除 token，需要重新登录
+        localStorage.removeItem('token');
+        localStorage.removeItem('username');
+        window.location.href = '/admin/login.html';
+      });
+
       var token = localStorage.getItem('token');
       var username = localStorage.getItem('username');
       if (!token) { window.location.href = '/admin/login.html'; }
       document.getElementById('displayUsername').textContent = username;
 
       var allFiles = [];
+      var filteredFiles = [];
       var searchKeyword = '';
       var parsingFileIds = new Set();
       var editingCell = null;  // { td, fileId, field, originalValue }
+      var currentPage = 1;
+      var pageSize = 10;
 
       var uploadArea = document.getElementById('uploadArea');
       var fileInput = document.getElementById('fileInput');
@@ -221,6 +287,15 @@
           }
           allFiles = data.data.files;
           renderTable();
+
+          // 自动解析未解析的文件（每次间隔 1 秒，避免并发过多）
+          var unparsed = allFiles.filter(function(f) { return !f.parsed && !parsingFileIds.has(String(f.fileId)); });
+          for (var i = 0; i < unparsed.length; i++) {
+            triggerParse(unparsed[i].fileId);
+            if (i < unparsed.length - 1) {
+              await new Promise(function(r) { setTimeout(r, 1000); });
+            }
+          }
         } catch (err) {
           fileTableBody.innerHTML = '<tr><td colspan="10" class="loading">加载失败: ' + escapeHtml(err.message) + '</td></tr>';
         }
@@ -228,6 +303,16 @@
 
       function getCellVal(parsed, key) {
         return (parsed && parsed[key]) ? escapeHtml(parsed[key]) : '';
+      }
+
+      function getDownloadName(file) {
+        var p = file.parsed;
+        if (!p || (!p.name && !p.phone)) return file.fileName;
+        var parts = [];
+        if (p.name) parts.push(p.name);
+        if (p.phone) parts.push(p.phone);
+        if (p.target_position) parts.push(p.target_position);
+        return parts.join('_') + '.pdf';
       }
 
       function cellHtml(p, isParsing, fileId, field, value) {
@@ -253,17 +338,28 @@
           });
         }
 
-        fileCount.textContent = '共 ' + files.length + ' 个文件';
+        filteredFiles = files;
+        var totalPages = Math.ceil(files.length / pageSize) || 1;
+        if (currentPage > totalPages) currentPage = totalPages;
+
+        var start = (currentPage - 1) * pageSize;
+        var pageFiles = files.slice(start, start + pageSize);
+
+        fileCount.textContent = files.length > 0
+          ? '第 ' + (start + 1) + '-' + Math.min(start + pageSize, files.length) + ' 条，共 ' + files.length + ' 个文件'
+          : '共 0 个文件';
 
         if (files.length === 0) {
           var icon = searchKeyword ? '🔍' : '📂';
           var msg = searchKeyword ? '没有匹配的文件' : '暂无上传记录';
           fileTableBody.innerHTML = '<tr><td colspan="10" class="empty-state"><div class="empty-icon">' + icon + '</div><div class="empty-text">' + msg + '</div></td></tr>';
+          renderPagination(0, 0);
           return;
         }
 
         var html = '';
-        files.forEach(function(f, idx) {
+        pageFiles.forEach(function(f, idx) {
+          var globalIdx = start + idx + 1;
           var p = f.parsed;
           var fileId = f.fileId;
           var isParsing = parsingFileIds.has(String(fileId));
@@ -273,7 +369,7 @@
           var safeName = escapeHtml(f.fileName);
 
           var cells = '';
-          cells += '<td class="col-num">' + (idx + 1) + '</td>';
+          cells += '<td class="col-num">' + globalIdx + '</td>';
           cells += cellHtml(p, isParsing, fileId, 'name', p && p.name);
           cells += cellHtml(p, isParsing, fileId, 'phone', p && p.phone);
           cells += cellHtml(p, isParsing, fileId, 'email', p && p.email);
@@ -311,16 +407,88 @@
               (p ? '<button class="btn btn-ghost btn-sm" data-action="detail" data-id="' + fileId + '">详情</button>' :
                (isParsing ? '<button class="btn btn-ghost btn-sm btn-parse loading">解析中</button>' :
                 '<button class="btn btn-ghost btn-sm btn-parse" data-action="parse" data-id="' + fileId + '">解析</button>')) +
-              '<button class="btn btn-ghost btn-sm" data-action="download" data-id="' + fileId + '" data-name="' + safeName + '">下载</button>' +
+              '<button class="btn btn-ghost btn-sm" data-action="download" data-id="' + fileId + '" data-name="' + escapeHtml(getDownloadName(f)) + '">下载</button>' +
               '<button class="btn btn-danger btn-sm" data-action="delete" data-id="' + fileId + '">删除</button>' +
             '</div></td>' +
           '</tr>';
         });
         fileTableBody.innerHTML = html;
+        renderPagination(files.length, totalPages);
       }
 
       searchBox.addEventListener('input', function() {
         searchKeyword = searchBox.value.trim().toLowerCase();
+        currentPage = 1;
+        renderTable();
+      });
+
+      // ====== 分页 ======
+      function renderPagination(totalItems, totalPages) {
+        var bar = document.getElementById('paginationBar');
+        var pagesEl = document.getElementById('paginationPages');
+        var pageInfo = document.getElementById('pageInfo');
+        var btnPrev = document.getElementById('btnPrev');
+        var btnNext = document.getElementById('btnNext');
+
+        if (totalItems === 0) {
+          bar.style.display = 'none';
+          return;
+        }
+        bar.style.display = 'flex';
+
+        pageInfo.textContent = currentPage + ' / ' + totalPages + ' 页';
+        btnPrev.disabled = currentPage <= 1;
+        btnNext.disabled = currentPage >= totalPages;
+
+        // 生成页码按钮
+        var html = '';
+        var maxVisible = 5;
+        var startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+        var endPage = Math.min(totalPages, startPage + maxVisible - 1);
+        if (endPage - startPage < maxVisible - 1) {
+          startPage = Math.max(1, endPage - maxVisible + 1);
+        }
+
+        if (startPage > 1) {
+          html += '<button class="btn-page-num" data-page="1">1</button>';
+          if (startPage > 2) html += '<span class="page-ellipsis">...</span>';
+        }
+
+        for (var p = startPage; p <= endPage; p++) {
+          html += '<button class="btn-page-num' + (p === currentPage ? ' active' : '') + '" data-page="' + p + '">' + p + '</button>';
+        }
+
+        if (endPage < totalPages) {
+          if (endPage < totalPages - 1) html += '<span class="page-ellipsis">...</span>';
+          html += '<button class="btn-page-num" data-page="' + totalPages + '">' + totalPages + '</button>';
+        }
+
+        pagesEl.innerHTML = html;
+      }
+
+      // 分页按钮事件
+      document.getElementById('paginationBar').addEventListener('click', function(e) {
+        var btn = e.target.closest('button');
+        if (!btn) return;
+        var page = parseInt(btn.getAttribute('data-page'));
+        if (!isNaN(page) && page !== currentPage) {
+          currentPage = page;
+          renderTable();
+        }
+      });
+
+      document.getElementById('btnPrev').addEventListener('click', function() {
+        if (currentPage > 1) { currentPage--; renderTable(); }
+      });
+
+      document.getElementById('btnNext').addEventListener('click', function() {
+        var total = Math.ceil(filteredFiles.length / pageSize) || 1;
+        if (currentPage < total) { currentPage++; renderTable(); }
+      });
+
+      document.getElementById('pageSizeSelect').addEventListener('change', function() {
+        pageSize = parseInt(this.value);
+        currentPage = 1;
         renderTable();
       });
 
@@ -447,11 +615,13 @@
       }
 
       function openPreview(fileId, fileName) {
+        var file = allFiles.find(function(f) { return f.fileId == fileId; });
+        var dlName = file ? getDownloadName(file) : fileName;
         var url = API_BASE + '/api/files/' + fileId + '/download?preview=1&token=' + encodeURIComponent(token);
         previewFrame.src = url;
         previewTitle.textContent = fileName || 'PDF 预览';
         modalDownload.setAttribute('data-id', fileId);
-        modalDownload.setAttribute('data-name', fileName);
+        modalDownload.setAttribute('data-name', escapeHtml(dlName));
         previewModal.classList.add('show');
         document.body.style.overflow = 'hidden';
       }
@@ -473,7 +643,7 @@
       });
 
       modalDownload.addEventListener('click', function() {
-        downloadFile(modalDownload.getAttribute('data-id'), modalDownload.getAttribute('data-name'));
+        downloadFile(modalDownload.getAttribute('data-id'), modalDownload.getAttribute('data-name'), modalDownload);
       });
 
       // ====== 详情模态框 ======
@@ -562,19 +732,31 @@
         loadFiles();
       }
 
-      async function downloadFile(fileId, fileName) {
+      async function downloadFile(fileId, fileName, btn) {
+        if (btn) {
+          btn.disabled = true;
+          btn.textContent = '下载中...';
+        }
+        showToast('正在下载: ' + fileName);
         try {
           var res = await fetch(API_BASE + '/api/files/' + fileId + '/download', {
             headers: { 'Authorization': 'Bearer ' + token },
           });
-          if (!res.ok) { showToast('下载失败', true); return; }
+          if (!res.ok) { showToast('下载失败', true); if (btn) { btn.disabled = false; btn.textContent = '下载'; } return; }
           var blob = await res.blob();
           var url = URL.createObjectURL(blob);
           var a = document.createElement('a');
           a.href = url; a.download = fileName;
           document.body.appendChild(a); a.click();
           document.body.removeChild(a); URL.revokeObjectURL(url);
-        } catch (err) { showToast('下载失败: ' + err.message, true); }
+          showToast('下载完成');
+        } catch (err) {
+          showToast('下载失败: ' + err.message, true);
+        }
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = '下载';
+        }
       }
 
       async function deleteFileItem(fileId) {

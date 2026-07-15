@@ -11,6 +11,14 @@
     <h1 id="pageTitle">登录</h1>
     <p class="subtitle" id="pageSubtitle">登录以管理您的PDF文件</p>
 
+    <div class="form-group">
+      <label>服务器</label>
+      <select class="server-selector" id="serverSelector" style="width:100%;padding:10px 14px;font-size:14px;">
+        <option value="http://localhost:3000">本地 (localhost:3000)</option>
+        <option value="http://43.167.211.80:3000">生产 (43.167.211.80)</option>
+      </select>
+    </div>
+
     <div class="error-msg" id="errorMsg"></div>
 
     <div class="form-group">
@@ -33,7 +41,17 @@
 
   <script>
     (function() {
-      const API_BASE = window.location.origin;
+      var savedServer = localStorage.getItem('selectedServer');
+      var API_BASE = savedServer || window.location.origin;
+      var serverSelector = document.getElementById('serverSelector');
+      if (savedServer) {
+        serverSelector.value = savedServer;
+      }
+      serverSelector.addEventListener('change', function() {
+        localStorage.setItem('selectedServer', serverSelector.value);
+        API_BASE = serverSelector.value;
+      });
+
       let isLogin = true;
 
       const submitBtn = document.getElementById('submitBtn');
