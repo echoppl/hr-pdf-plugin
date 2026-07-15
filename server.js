@@ -28,6 +28,11 @@ app.use('/admin', express.static(path.join(__dirname, 'admin')));
 // 公开下载文件
 app.use('/download', express.static(path.join(__dirname, 'public')));
 
+// 首页重定向到产品落地页
+app.get('/', (req, res) => {
+  res.redirect('/admin/landing.html');
+});
+
 // 管理后台默认跳转到登录页
 app.get('/admin', (req, res) => {
   res.redirect('/admin/login.html');

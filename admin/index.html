@@ -10,19 +10,21 @@
   <div class="topbar">
     <div class="topbar-bg"></div>
     <div class="server-section">
-      <div class="brand-logo">
-        <svg class="brand-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="4" y="2" width="24" height="28" rx="3" fill="white" fill-opacity="0.2"/>
-          <rect x="7" y="7" width="18" height="2" rx="1" fill="white" fill-opacity="0.8"/>
-          <rect x="7" y="12" width="14" height="2" rx="1" fill="white" fill-opacity="0.6"/>
-          <rect x="7" y="17" width="16" height="2" rx="1" fill="white" fill-opacity="0.6"/>
-          <rect x="7" y="22" width="10" height="2" rx="1" fill="white" fill-opacity="0.6"/>
-        </svg>
-        <div class="brand-text">
-          <span class="brand-name">PDF 文件管理</span>
-          <span class="brand-sub">简历解析 · 云端存储</span>
+      <a href="/admin/index.html" class="brand-logo-link">
+        <div class="brand-logo">
+          <svg class="brand-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="4" y="2" width="24" height="28" rx="3" fill="white" fill-opacity="0.2"/>
+            <rect x="7" y="7" width="18" height="2" rx="1" fill="white" fill-opacity="0.8"/>
+            <rect x="7" y="12" width="14" height="2" rx="1" fill="white" fill-opacity="0.6"/>
+            <rect x="7" y="17" width="16" height="2" rx="1" fill="white" fill-opacity="0.6"/>
+            <rect x="7" y="22" width="10" height="2" rx="1" fill="white" fill-opacity="0.6"/>
+          </svg>
+          <div class="brand-text">
+            <span class="brand-name">PDF 文件管理</span>
+            <span class="brand-sub">简历解析 · 云端存储</span>
+          </div>
         </div>
-      </div>
+      </a>
       <span class="server-label" id="serverLabel" style="display:none;">服务器:</span>
       <select class="server-selector" id="serverSelector" style="display:none;">
         <option value="http://localhost:3000">本地 (localhost:3000)</option>
@@ -30,6 +32,7 @@
       </select>
     </div>
     <div class="user-info">
+      <a class="topbar-nav-link" href="/admin/landing.html" target="_blank">首页</a>
       <a class="topbar-nav-link" id="adminUsersLink" href="/admin/users.html" style="display:none;">用户管理</a>
       <a class="topbar-nav-link" href="/admin/docs.html" target="_blank">使用文档</a>
       <a class="topbar-nav-link" href="/download/chrome-resume-plugin.zip" download>下载插件</a>

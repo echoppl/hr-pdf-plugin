@@ -157,22 +157,24 @@
   <div class="topbar">
     <div class="topbar-bg"></div>
     <div class="server-section">
-      <div class="brand-logo">
-        <svg class="brand-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="4" y="2" width="24" height="28" rx="3" fill="white" fill-opacity="0.2"/>
-          <rect x="7" y="7" width="18" height="2" rx="1" fill="white" fill-opacity="0.8"/>
-          <rect x="7" y="12" width="14" height="2" rx="1" fill="white" fill-opacity="0.6"/>
-          <rect x="7" y="17" width="16" height="2" rx="1" fill="white" fill-opacity="0.6"/>
-          <rect x="7" y="22" width="10" height="2" rx="1" fill="white" fill-opacity="0.6"/>
-        </svg>
-        <div class="brand-text">
-          <span class="brand-name">PDF 简历管理系统</span>
-          <span class="brand-sub">使用文档</span>
+      <a href="/admin/index.html" class="brand-logo-link">
+        <div class="brand-logo">
+          <svg class="brand-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="4" y="2" width="24" height="28" rx="3" fill="white" fill-opacity="0.2"/>
+            <rect x="7" y="7" width="18" height="2" rx="1" fill="white" fill-opacity="0.8"/>
+            <rect x="7" y="12" width="14" height="2" rx="1" fill="white" fill-opacity="0.6"/>
+            <rect x="7" y="17" width="16" height="2" rx="1" fill="white" fill-opacity="0.6"/>
+            <rect x="7" y="22" width="10" height="2" rx="1" fill="white" fill-opacity="0.6"/>
+          </svg>
+          <div class="brand-text">
+            <span class="brand-name">PDF 简历管理系统</span>
+            <span class="brand-sub">使用文档</span>
+          </div>
         </div>
-      </div>
+      </a>
     </div>
     <div class="user-info">
-      <a class="topbar-nav-link" href="/admin">管理后台</a>
+      <a class="topbar-nav-link" href="/admin/index.html">管理后台</a>
       <a class="topbar-nav-link" href="/download/chrome-resume-plugin.zip" download>下载插件</a>
     </div>
   </div>
@@ -194,6 +196,7 @@
       <div class="toc-title">目录</div>
       <ul class="toc-list">
         <li><a href="#overview">产品简介</a></li>
+        <li><a href="#scenarios">核心使用场景</a></li>
         <li><a href="#install">插件安装</a></li>
         <li><a href="#plugin-usage">插件使用</a></li>
         <li><a href="#admin-login">管理后台</a></li>
@@ -206,7 +209,7 @@
     <div class="docs-section" id="overview">
       <h2>产品简介</h2>
       <p>PDF 简历智能管理系统是一套完整的简历收集、解析和管理解决方案，由<strong>Chrome 浏览器插件</strong>和<strong>Web 管理后台</strong>两部分组成。</p>
-      <p>在招聘网站上浏览简历时，通过插件<strong>一键上传 PDF</strong> 到云端服务器，系统会调用 AI（智谱 GLM）自动解析简历内容，提取出姓名、手机、邮箱、应聘职位、学历、经验、工作经历等结构化字段。你可以在管理后台统一查看、搜索、编辑和下载所有简历。</p>
+      <p>核心场景：在 <strong>Boss直聘</strong>（zhipin.com）和<strong>猎聘</strong>（liepin.com）浏览候选人简历时，插件会自动检测页面中的 PDF 简历文件，你可以一键上传到云端，系统调用 AI（智谱 GLM）自动解析，提取姓名、手机、邮箱、应聘职位、学历、经验、工作经历等结构化字段。所有简历在管理后台统一查看、搜索、编辑和下载。也支持在任何网页通过快捷键手动上传本地 PDF。</p>
 
       <div class="feature-grid">
         <div class="feature-card">
@@ -229,6 +232,24 @@
           <div class="fc-desc">PDF 文件存储在腾讯云 COS，安全可靠</div>
           <div class="fc-title">云端存储</div>
         </div>
+      </div>
+    </div>
+
+    <!-- 核心使用场景 -->
+    <div class="docs-section" id="scenarios">
+      <h2>核心使用场景</h2>
+
+      <h3>场景一：Boss直聘</h3>
+      <p>在 <code class="inline">zhipin.com</code> 浏览候选人简历时，插件会自动检测页面中的 PDF 简历文件。检测到后插件图标会显示提示标记，点击插件图标即可查看检测到的简历并一键上传。</p>
+
+      <h3>场景二：猎聘</h3>
+      <p>在 <code class="inline">liepin.com</code> 浏览简历时，插件同样会自动检测页面中的 PDF 简历。操作方式与 Boss直聘一致，检测到简历后一键上传即可。</p>
+
+      <h3>场景三：任意网页手动上传</h3>
+      <p>除了招聘平台自动检测外，你也可以在任意网页通过快捷键 <code class="inline">⌘+Shift+U</code>（Windows: <code class="inline">Ctrl+Shift+U</code>）手动选择本地 PDF 文件上传，适用于从邮件、聊天工具等其他渠道获取的简历。</p>
+
+      <div class="docs-notice">
+        <strong>提示</strong>：自动检测功能目前针对 Boss直聘和猎聘页面做了专项适配，能精准识别页面中的 PDF 简历。更多招聘平台支持持续扩展中。
       </div>
     </div>
 
@@ -286,30 +307,40 @@
         <strong>注意</strong>：如果使用线上服务器，请将顶部「服务器」下拉框切换为「生产 (43.167.211.80)」，然后再登录/注册。本地测试使用「本地 (localhost:3000)」。
       </div>
 
-      <h3>上传简历</h3>
+      <h3>在 Boss直聘/猎聘上传简历</h3>
       <ol class="step-list">
         <li>
           <span class="step-num">1</span>
           <div class="step-body">
-            <div class="step-title">打开插件面板</div>
-            <div class="step-desc">点击浏览器工具栏中的插件图标，确认已登录状态。</div>
+            <div class="step-title">打开招聘平台简历页面</div>
+            <div class="step-desc">打开 Boss直聘（<code class="inline">zhipin.com</code>）或猎聘（<code class="inline">liepin.com</code>），进入候选人简历详情页面。</div>
           </div>
         </li>
         <li>
           <span class="step-num">2</span>
           <div class="step-body">
-            <div class="step-title">选择 PDF 文件</div>
-            <div class="step-desc">点击「选择文件」按钮，或在 Mac 上使用快捷键 <code class="inline">⌘+Shift+U</code>（Windows: <code class="inline">Ctrl+Shift+U</code>）触发快速上传。</div>
+            <div class="step-title">插件自动检测 PDF 简历</div>
+            <div class="step-desc">插件会自动扫描页面内容，检测到 PDF 简历后，插件图标上会显示提示标记。</div>
           </div>
         </li>
         <li>
           <span class="step-num">3</span>
           <div class="step-body">
-            <div class="step-title">等待上传完成</div>
-            <div class="step-desc">上传进度条完成后，系统会自动调用 AI 解析简历信息。你可以打开管理后台查看结果。</div>
+            <div class="step-title">一键上传</div>
+            <div class="step-desc">点击浏览器工具栏中的插件图标，在弹出的面板中可以看到检测到的简历列表，点击「上传」即可将 PDF 发送到云端。</div>
+          </div>
+        </li>
+        <li>
+          <span class="step-num">4</span>
+          <div class="step-body">
+            <div class="step-title">AI 自动解析</div>
+            <div class="step-desc">上传完成后，系统自动调用 AI 解析简历信息，提取姓名、手机、邮箱等关键字段。打开管理后台即可查看解析结果。</div>
           </div>
         </li>
       </ol>
+
+      <h3>手动上传本地 PDF</h3>
+      <p>如果简历保存在本地，也可以手动上传：点击插件图标，在面板中点击「选择文件」按钮，或使用快捷键 <code class="inline">⌘+Shift+U</code>（Windows: <code class="inline">Ctrl+Shift+U</code>）触发文件选择器。
 
       <h3>快捷键</h3>
       <p>插件支持快捷键上传：<strong>Mac</strong> 使用 <code class="inline">⌘+Shift+U</code>，<strong>Windows</strong> 使用 <code class="inline">Ctrl+Shift+U</code>。在任意页面按下快捷键即可触发文件选择器。</p>
@@ -445,6 +476,9 @@
 
       <h3>7. 如何切换本地和服务器？</h3>
       <p>插件登录页和管理后台登录页顶部都有「服务器」下拉框，选择后会自动切换。注意切换服务器后需要重新登录。</p>
+
+      <h3>8. 插件支持哪些招聘网站？</h3>
+      <p>目前主要支持 <strong>Boss直聘</strong>（zhipin.com）和<strong>猎聘</strong>（liepin.com），插件会自动检测这两个平台页面中的 PDF 简历。未来会扩展更多招聘平台支持。此外，也支持在任何网页通过快捷键 <code class="inline">⌘+Shift+U</code>（Windows: <code class="inline">Ctrl+Shift+U</code>）手动上传本地 PDF 文件。</p>
     </div>
 
   </div>

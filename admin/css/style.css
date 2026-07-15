@@ -1117,3 +1117,33 @@ body {
   font-size: 12px;
   color: rgba(255,255,255,.25);
 }
+
+/* ====== 品牌 logo 可点击链接 ====== */
+.brand-logo-link {
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+  border-radius: var(--radius);
+  padding: 4px 8px;
+  margin: -4px -8px;
+  transition: background 0.2s;
+}
+.brand-logo-link:hover {
+  background: rgba(255,255,255,.1);
+}
+
+/* ====== 登录页返回链接 ====== */
+.login-back-link {
+  display: block;
+  text-align: center;
+  margin-bottom: 16px;
+  color: var(--text-muted);
+  font-size: 13px;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.login-back-link:hover {
+  color: var(--primary);
+}
