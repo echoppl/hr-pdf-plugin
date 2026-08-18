@@ -5,6 +5,7 @@ const { downloadFromCos } = require('../services/cos');
 const {
   getResumeParsedByFileId,
   getResumeParsed,
+  getResumeParsedByUserId,
   upsertResumeParsed,
   updateResumeParsedField,
   getFileById,
@@ -52,10 +53,10 @@ router.post('/parse/:fileId', async (req, res) => {
   }
 });
 
-// GET /api/resume - 获取所有解析结果
+// GET /api/resume - 仅返回当前用户自己的解析结果（已按 user_id 隔离，杜绝跨用户泄露）
 router.get('/', (req, res) => {
   try {
-    const list = getResumeParsed();
+    const list = getResumeParsedByUserId(req.user.id);
     res.json({
       code: 200,
       data: { total: list.length, list },

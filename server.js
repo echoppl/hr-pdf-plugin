@@ -13,7 +13,20 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // 中间件
-app.use(cors());
+// CORS：默认放行同源与插件来源(chrome-extension://)，生产域名通过 CORS_ORIGIN 配置
+const ALLOWED_ORIGINS = [process.env.CORS_ORIGIN, 'http://43.167.211.80:3000']
+  .filter(Boolean);
+app.use(
+  cors({
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true); // 同源 / 非浏览器请求
+      if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+      if (origin.startsWith('chrome-extension://')) return cb(null, true); // 插件 ID 动态，按来源放行
+      return cb(null, false);
+    },
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 // API 路由

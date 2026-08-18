@@ -211,6 +211,20 @@ function getResumeParsed() {
   return rows.map(formatParsedRow);
 }
 
+// 按用户隔离：仅返回当前用户自己的简历解析结果（修复跨用户 PII 泄露）
+function getResumeParsedByUserId(userId) {
+  const db = getDb();
+  const stmt = db.prepare(`
+    SELECT rp.*, f.file_name, f.upload_time
+    FROM resume_parsed rp
+    JOIN files f ON rp.file_id = f.id
+    WHERE f.user_id = ?
+    ORDER BY rp.parsed_at DESC
+  `);
+  const rows = stmt.all(userId);
+  return rows.map(formatParsedRow);
+}
+
 function getResumeParsedByFileId(fileId) {
   const db = getDb();
   const stmt = db.prepare('SELECT * FROM resume_parsed WHERE file_id = ?');
@@ -267,6 +281,7 @@ module.exports = {
   deleteFile,
   upsertResumeParsed,
   getResumeParsed,
+  getResumeParsedByUserId,
   getResumeParsedByFileId,
   deleteResumeParsed,
   updateResumeParsedField,

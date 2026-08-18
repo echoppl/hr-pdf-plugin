@@ -1,7 +1,7 @@
 const express = require('express');
 const authMiddleware = require('../middleware/auth');
 const adminMiddleware = require('../middleware/admin');
-const { getAllUsers, getUserById, updateUserRole } = require('../db/database');
+const { getAllUsers, getUserById, updateUserRole, getAllFiles } = require('../db/database');
 
 const router = express.Router();
 
@@ -26,6 +26,28 @@ router.get('/users', (req, res) => {
     });
   } catch (err) {
     console.error('获取用户列表失败:', err);
+    res.status(500).json({ code: 500, message: '服务器错误' });
+  }
+});
+
+// GET /api/admin/resumes — 管理员查看全公司简历文件列表（受 admin 中间件保护，非管理员不可访问）
+router.get('/resumes', (req, res) => {
+  try {
+    const files = getAllFiles();
+    const list = files.map((f) => ({
+      fileId: f.id,
+      fileName: f.file_name,
+      fileSize: f.file_size,
+      fileSizeReadable: f.file_size_readable,
+      uploadTime: f.upload_time,
+      uploader: f.username,
+    }));
+    res.json({
+      code: 200,
+      data: { total: list.length, files: list },
+    });
+  } catch (err) {
+    console.error('获取全量简历失败:', err);
     res.status(500).json({ code: 500, message: '服务器错误' });
   }
 });
