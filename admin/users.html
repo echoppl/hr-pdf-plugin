@@ -45,7 +45,7 @@
     .col-username { min-width: 120px; }
     .col-role { width: 140px; }
     .col-time { width: 180px; }
-    .col-action { width: 160px; }
+    .col-action { width: 200px; }
     .user-table {
       width: 100%;
       border-collapse: collapse;
@@ -76,6 +76,25 @@
       font-size: 12px;
       margin-left: 8px;
     }
+    /* 重置密码弹窗 */
+    .modal-mask {
+      position: fixed; inset: 0; background: rgba(15,23,42,.45);
+      display: flex; align-items: center; justify-content: center; z-index: 1000;
+    }
+    .modal-box {
+      background: #fff; border-radius: var(--radius); width: 360px; max-width: 90vw;
+      padding: 24px; box-shadow: 0 20px 60px rgba(0,0,0,.2);
+    }
+    .modal-box h3 { margin: 0 0 4px; font-size: 16px; }
+    .modal-user { margin: 0 0 16px; color: var(--text-secondary); font-size: 13px; }
+    .modal-box input {
+      width: 100%; box-sizing: border-box; padding: 9px 12px; font-size: 14px;
+      border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 16px;
+    }
+    .modal-box input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+    .btn-reset-pwd { color: #d4380d; border-color: #ffccc7; background: #fff1f0; }
+    .btn-reset-pwd:hover { color: #d4380d; border-color: #d4380d; background: #fff1f0; }
   </style>
 </head>
 <body class="admin-page">
@@ -140,6 +159,19 @@
   </footer>
 
   <div class="toast" id="toast"></div>
+
+  <!-- 重置密码弹窗 -->
+  <div class="modal-mask" id="pwdModal" style="display:none;">
+    <div class="modal-box">
+      <h3>重置密码</h3>
+      <p class="modal-user" id="pwdModalUser"></p>
+      <input type="password" id="newPwdInput" placeholder="请输入新密码（至少 6 位）" autocomplete="new-password" />
+      <div class="modal-actions">
+        <button class="btn-role" id="pwdCancel">取消</button>
+        <button class="btn-role" id="pwdConfirm" style="border-color:var(--primary);color:var(--primary);background:var(--primary-light);">确认重置</button>
+      </div>
+    </div>
+  </div>
 
   <script>
     (function() {
@@ -248,13 +280,17 @@
             '<td style="color:var(--text-secondary);">' + formatTime(u.created_at) + '</td>' +
             '<td>';
 
+          var roleBtn = '';
           if (!isSelf) {
             if (u.role === 'user') {
-              html += '<button class="btn-role" data-action="promote" data-id="' + u.id + '" data-username="' + escapeHtml(u.username) + '">提升为管理员</button>';
+              roleBtn = '<button class="btn-role" data-action="promote" data-id="' + u.id + '" data-username="' + escapeHtml(u.username) + '">提升为管理员</button>';
             } else {
-              html += '<button class="btn-role" data-action="demote" data-id="' + u.id + '" data-username="' + escapeHtml(u.username) + '">降级为普通用户</button>';
+              roleBtn = '<button class="btn-role" data-action="demote" data-id="' + u.id + '" data-username="' + escapeHtml(u.username) + '">降级为普通用户</button>';
             }
           }
+          var pwdBtn = '<button class="btn-role btn-reset-pwd" data-action="reset-password" data-id="' + u.id + '" data-username="' + escapeHtml(u.username) + '">重置密码</button>';
+
+          html += roleBtn + (roleBtn ? ' ' : '') + pwdBtn;
 
           html += '</td></tr>';
         });
@@ -269,6 +305,11 @@
         var action = btn.getAttribute('data-action');
         var userId = btn.getAttribute('data-id');
         var uname = btn.getAttribute('data-username');
+
+        if (action === 'reset-password') {
+          openPwdModal(userId, uname);
+          return;
+        }
 
         var newRole = action === 'promote' ? 'admin' : 'user';
         var actionLabel = action === 'promote' ? '提升为管理员' : '降级为普通用户';
@@ -302,6 +343,51 @@
       });
 
       document.getElementById('btnLogout').addEventListener('click', logout);
+
+      // ===== 重置密码弹窗 =====
+      var pwdModal = document.getElementById('pwdModal');
+      var pwdModalUser = document.getElementById('pwdModalUser');
+      var newPwdInput = document.getElementById('newPwdInput');
+      var pwdTargetId = null, pwdTargetName = null;
+
+      function openPwdModal(id, uname) {
+        pwdTargetId = id; pwdTargetName = uname;
+        pwdModalUser.textContent = '用户：' + uname;
+        newPwdInput.value = '';
+        pwdModal.style.display = 'flex';
+        newPwdInput.focus();
+      }
+      function closePwdModal() {
+        pwdModal.style.display = 'none';
+        pwdTargetId = null; pwdTargetName = null;
+      }
+      pwdModal.addEventListener('click', function(e) {
+        if (e.target === pwdModal) closePwdModal();
+      });
+      document.getElementById('pwdCancel').addEventListener('click', closePwdModal);
+      document.getElementById('pwdConfirm').addEventListener('click', async function() {
+        var pwd = newPwdInput.value;
+        if (!pwd || pwd.length < 6) { showToast('新密码至少 6 位', true); return; }
+        var btn = this; btn.disabled = true; btn.textContent = '重置中...';
+        try {
+          var res = await fetch(API_BASE + '/api/admin/users/' + pwdTargetId + '/password', {
+            method: 'PUT',
+            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ newPassword: pwd }),
+          });
+          var data = await res.json();
+          if (data.code === 200) {
+            showToast('已重置「' + pwdTargetName + '」的密码，请通知其重新登录');
+            closePwdModal();
+          } else {
+            showToast(data.message || '重置失败', true);
+          }
+        } catch (err) {
+          showToast('重置失败: ' + err.message, true);
+        } finally {
+          if (btn) { btn.disabled = false; btn.textContent = '确认重置'; }
+        }
+      });
 
       init();
     })();

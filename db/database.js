@@ -101,6 +101,13 @@ function updateUserRole(id, role) {
   return result.changes > 0;
 }
 
+// 重置用户密码（admin 调用，传入已哈希的密码）
+function resetUserPassword(id, hashedPassword) {
+  const stmt = getDb().prepare('UPDATE users SET password = ? WHERE id = ?');
+  const result = stmt.run(hashedPassword, id);
+  return result.changes > 0;
+}
+
 // ====== 文件操作 ======
 
 function createFileRecord(userId, fileName, fileUrl, fileSize, fileSizeReadable, cosKey) {
@@ -274,6 +281,7 @@ module.exports = {
   getAllUsers,
   getUserById,
   updateUserRole,
+  resetUserPassword,
   createFileRecord,
   getFileById,
   getFilesByUserId,

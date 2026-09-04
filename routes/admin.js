@@ -1,7 +1,8 @@
 const express = require('express');
 const authMiddleware = require('../middleware/auth');
 const adminMiddleware = require('../middleware/admin');
-const { getAllUsers, getUserById, updateUserRole, getAllFiles } = require('../db/database');
+const bcrypt = require('bcrypt');
+const { getAllUsers, getUserById, updateUserRole, resetUserPassword, getAllFiles } = require('../db/database');
 
 const router = express.Router();
 
@@ -84,6 +85,38 @@ router.put('/users/:id/role', (req, res) => {
     });
   } catch (err) {
     console.error('修改角色失败:', err);
+    res.status(500).json({ code: 500, message: '服务器错误' });
+  }
+});
+
+// PUT /api/admin/users/:id/password — 重置用户密码（仅 admin）
+router.put('/users/:id/password', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { newPassword } = req.body || {};
+
+    if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 6) {
+      return res.status(400).json({ code: 400, message: '新密码至少 6 位' });
+    }
+
+    const user = getUserById(id);
+    if (!user) {
+      return res.status(404).json({ code: 404, message: '用户不存在' });
+    }
+
+    const hash = bcrypt.hashSync(newPassword, 10);
+    const ok = resetUserPassword(id, hash);
+    if (!ok) {
+      return res.status(500).json({ code: 500, message: '重置失败' });
+    }
+
+    res.json({
+      code: 200,
+      message: '密码已重置，请通知该用户使用新密码重新登录',
+      data: { id, username: user.username }
+    });
+  } catch (err) {
+    console.error('重置密码失败:', err);
     res.status(500).json({ code: 500, message: '服务器错误' });
   }
 });
