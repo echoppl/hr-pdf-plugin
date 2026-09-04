@@ -266,7 +266,8 @@
       <p>点击顶部「下载插件」按钮，或在管理后台右上角点击「下载插件」，获取 <code class="inline">chrome-resume-plugin.zip</code>。</p>
 
       <h3>2. 解压</h3>
-      <p>将下载的 zip 文件解压到本地任意目录，解压后得到一个 <code class="inline">dist</code> 文件夹。</p>
+      <p>将下载的 zip 文件解压到本地任意目录。解压后会得到一个文件夹，文件夹里有 <code class="inline">manifest.json</code>、<code class="inline">index.html</code> 等文件（不需要再点进去看里面）。</p>
+      <p style="color:var(--text-muted);font-size:13px;margin-top:6px;">💡 文件夹叫什么名字无所谓（解压软件会按 zip 内的目录命名），只要里面能看到 <code class="inline">manifest.json</code> 就行。</p>
 
       <h3>3. 安装到 Chrome</h3>
       <ol class="step-list">
@@ -288,7 +289,7 @@
           <span class="step-num">3</span>
           <div class="step-body">
             <div class="step-title">加载扩展</div>
-            <div class="step-desc">点击「加载已解压的扩展程序」，选择解压后的 <code class="inline">dist</code> 文件夹。</div>
+            <div class="step-desc">点击「加载已解压的扩展程序」，选择上一步解压得到的那个文件夹（不用进到里面，选外层那个）。</div>
           </div>
         </li>
         <li>
@@ -345,6 +346,43 @@
 
       <h3>快捷键</h3>
       <p>插件支持快捷键上传：<strong>Mac</strong> 使用 <code class="inline">⌘+Shift+U</code>，<strong>Windows</strong> 使用 <code class="inline">Ctrl+Shift+U</code>。在任意页面按下快捷键即可触发文件选择器。</p>
+
+      <div class="docs-notice" style="margin-top:16px;">
+        <strong>💡 弹窗状态条怎么看</strong><br>
+        🟢 <strong>绿色条</strong> — 简历已检测到，可以提交<br>
+        🔴 <strong>红色条</strong> — 没检测到简历，刷新页面试试<br>
+        🔵 <strong>蓝色条</strong> — 正在检测中，稍等一下<br>
+        🟠 <strong>橙色提示</strong> — 还没选岗位，选了才能提交
+      </div>
+
+      <h3>一键发布职位</h3>
+      <p>登录 HRM 系统（<code class="inline">hrm.fcbox.com</code>），进入「职位管理」页面，点击「新建职位」按钮：</p>
+      <ol class="step-list">
+        <li>
+          <span class="step-num">1</span>
+          <div class="step-body">
+            <div class="step-title">填写职位信息</div>
+            <div class="step-desc">填写职位名称、职责、要求、薪资等必填项。</div>
+          </div>
+        </li>
+        <li>
+          <span class="step-num">2</span>
+          <div class="step-body">
+            <div class="step-title">勾选发布平台</div>
+            <div class="step-desc">勾选要发布到的平台（可多选：Boss直聘、猎聘）。</div>
+          </div>
+        </li>
+        <li>
+          <span class="step-num">3</span>
+          <div class="step-body">
+            <div class="step-title">点击「一键发布」</div>
+            <div class="step-desc">确认平台已登录后，点击「一键发布」按钮。发布成功后会有提示。</div>
+          </div>
+        </li>
+      </ol>
+      <div class="docs-notice">
+        <strong>📌 发布前请确保：</strong>已用 Chrome 登录 HRM 系统以及要发布的招聘网站（Boss直聘 / 猎聘），登录一次即可记住。
+      </div>
     </div>
 
     <!-- 管理后台 -->
@@ -487,6 +525,18 @@
 
       <h3>8. 插件支持哪些招聘网站？</h3>
       <p>目前主要支持 <strong>Boss直聘</strong>（zhipin.com）和<strong>猎聘</strong>（liepin.com），插件会自动检测这两个平台页面中的 PDF 简历。未来会扩展更多招聘平台支持。此外，也支持在任何网页通过快捷键 <code class="inline">⌘+Shift+U</code>（Windows: <code class="inline">Ctrl+Shift+U</code>）手动上传 PDF 文件。</p>
+
+      <h3>9. 弹窗状态条是红色的怎么办？</h3>
+      <p>说明没检测到简历。刷新简历页面，等待页面完全加载后再点插件图标。如果还是红色，说明这个简历格式插件暂不支持，可以手动上传 PDF 文件。</p>
+
+      <h3>10. 提交按钮点不了？</h3>
+      <p>说明还没选「关联需求岗位」，在下拉框里选一个对应的岗位就能点了。</p>
+
+      <h3>11. 提交后显示失败？</h3>
+      <p>可能原因：① 没登录 HRM 系统；② 网络不稳定。确认登录后重新提交。</p>
+
+      <h3>12. 下次打开浏览器还需要重新安装吗？</h3>
+      <p>不需要。Chrome 扩展安装一次就永久有效，关机再开机也能用，只要不手动删除就行。</p>
     </div>
 
   </div>
