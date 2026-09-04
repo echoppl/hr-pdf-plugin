@@ -11,7 +11,7 @@
  *   - DB_PATH 默认 ../data/data.db（容器内即 /app/data/data.db）
  */
 const Database = require('better-sqlite3');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const path = require('path');
 
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, '..', 'data', 'data.db');

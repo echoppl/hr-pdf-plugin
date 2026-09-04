@@ -1,7 +1,7 @@
 const express = require('express');
 const authMiddleware = require('../middleware/auth');
 const adminMiddleware = require('../middleware/admin');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const { getAllUsers, getUserById, updateUserRole, resetUserPassword, getAllFiles } = require('../db/database');
 
 const router = express.Router();
