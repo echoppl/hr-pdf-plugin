@@ -48,11 +48,22 @@ function getLLMConfig() {
     baseUrl: process.env.LLM_BASE_URL || 'https://api.openai.com/v1',
     model: process.env.LLM_MODEL || 'gpt-4o-mini',
     visionModel: process.env.LLM_VISION_MODEL || 'glm-4v-flash',
+    // LLM 请求超时（毫秒），默认 120 秒；网络慢时可调大
+    timeoutMs: parseInt(process.env.LLM_TIMEOUT_MS, 10) || 120000,
   };
+}
+
+// 带超时的 fetch：超时后中断请求并抛出明确错误，避免无限挂起
+function fetchWithTimeout(url, options, timeoutMs) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal })
+    .finally(() => clearTimeout(timer));
 }
 
 // ====== 从 PDF Buffer 提取文本 ======
 async function extractTextFromPdf(buffer) {
+  const t0 = Date.now();
   let parser;
   try {
     parser = new PDFParse({ data: buffer });
@@ -61,9 +72,10 @@ async function extractTextFromPdf(buffer) {
       .replace(/\n{3,}/g, '\n\n')
       .replace(/\r/g, '')
       .trim();
+    console.log(`[简历解析] PDF文本提取: ${text.length}字符, 耗时 ${Date.now() - t0}ms`);
     return text;
   } catch (err) {
-    console.error('PDF文本提取失败:', err.message);
+    console.error(`PDF文本提取失败(耗时 ${Date.now() - t0}ms):`, err.message);
     return '';
   } finally {
     if (parser) {
@@ -74,6 +86,7 @@ async function extractTextFromPdf(buffer) {
 
 // ====== PDF 渲染为图片（用于扫描件） ======
 async function pdfToImages(buffer, maxPages = 3) {
+  const t0 = Date.now();
   const images = [];
   try {
     const doc = await pdfToImg(buffer, { scale: 2 });
@@ -83,8 +96,9 @@ async function pdfToImages(buffer, maxPages = 3) {
       pageNum++;
       if (pageNum >= maxPages) break;
     }
+    console.log(`[简历解析] PDF渲染图片: ${images.length}页, 耗时 ${Date.now() - t0}ms`);
   } catch (err) {
-    console.error('PDF渲染为图片失败:', err.message);
+    console.error(`PDF渲染为图片失败(耗时 ${Date.now() - t0}ms):`, err.message);
     throw new Error(`PDF 渲染失败: ${err.message}`);
   }
   return images;
@@ -106,14 +120,15 @@ function parseLLMResponse(content) {
 
 // ====== 纯文本解析（文本型 PDF） ======
 async function parseWithTextLLM(text) {
-  const { apiKey, baseUrl, model } = getLLMConfig();
+  const { apiKey, baseUrl, model, timeoutMs } = getLLMConfig();
 
   if (!apiKey || apiKey === 'sk-your-api-key') {
     throw new Error('请先配置 LLM_API_KEY（在 .env 文件中设置）');
   }
 
   const url = `${baseUrl}/chat/completions`;
-  const response = await fetch(url, {
+  const t0 = Date.now();
+  const response = await fetchWithTimeout(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -127,7 +142,14 @@ async function parseWithTextLLM(text) {
       temperature: 0.1,
       max_tokens: 4096,
     }),
+  }, timeoutMs).catch((err) => {
+    if (err.name === 'AbortError') {
+      throw new Error(`LLM 请求超时（${Math.round(timeoutMs / 1000)}秒）：网络慢或模型响应慢，可在 .env 调大 LLM_TIMEOUT_MS`);
+    }
+    throw new Error(`LLM 网络请求失败: ${err.message}`);
   });
+
+  console.log(`[简历解析] 文本LLM响应: HTTP ${response.status}, 耗时 ${Date.now() - t0}ms`);
 
   if (!response.ok) {
     const errorBody = await response.text();
@@ -143,7 +165,7 @@ async function parseWithTextLLM(text) {
 
 // ====== 视觉解析（扫描件/图片型 PDF） ======
 async function parseWithVisionLLM(images) {
-  const { apiKey, baseUrl, visionModel } = getLLMConfig();
+  const { apiKey, baseUrl, visionModel, timeoutMs } = getLLMConfig();
 
   if (!apiKey || apiKey === 'sk-your-api-key') {
     throw new Error('请先配置 LLM_API_KEY（在 .env 文件中设置）');
@@ -160,7 +182,8 @@ async function parseWithVisionLLM(images) {
     })),
   ];
 
-  const response = await fetch(url, {
+  const t0 = Date.now();
+  const response = await fetchWithTimeout(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -172,7 +195,14 @@ async function parseWithVisionLLM(images) {
       temperature: 0.1,
       max_tokens: 4096,
     }),
+  }, timeoutMs).catch((err) => {
+    if (err.name === 'AbortError') {
+      throw new Error(`视觉LLM 请求超时（${Math.round(timeoutMs / 1000)}秒）：图片较大或网络慢，可在 .env 调大 LLM_TIMEOUT_MS`);
+    }
+    throw new Error(`视觉LLM 网络请求失败: ${err.message}`);
   });
+
+  console.log(`[简历解析] 视觉LLM响应: HTTP ${response.status}, 耗时 ${Date.now() - t0}ms`);
 
   if (!response.ok) {
     const errorBody = await response.text();

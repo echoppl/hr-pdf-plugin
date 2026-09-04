@@ -302,8 +302,8 @@
             // 立即刷新列表，显示解析中状态
             await loadFiles(false);
 
-            // 轮询等待解析完成（后端后台解析较慢时给足 90 秒）
-            var maxPoll = 45;
+            // 轮询等待解析完成（后端 LLM 超时 120s，前端给到 150s 窗口）
+            var maxPoll = 75;
             var polled = 0;
             while (polled < maxPoll) {
               await new Promise(function(r) { setTimeout(r, 2000); });
@@ -321,7 +321,7 @@
             }
             if (polled >= maxPoll) {
               parsingFileIds.delete(String(newFileId));
-              uploadProgress.textContent = '解析超时，可稍后手动解析';
+              uploadProgress.textContent = '解析耗时较长（可能仍在后台进行），稍后刷新页面查看结果';
               uploadProgress.className = 'upload-progress show';
             }
           } else {
