@@ -295,7 +295,7 @@
           <span class="step-num">4</span>
           <div class="step-body">
             <div class="step-title">固定到工具栏</div>
-            <div class="step-desc">点击 Chrome 右上角拼图图标，找到「简历收集(本地)」，点击图钉固定到工具栏。</div>
+            <div class="step-desc">点击 Chrome 右上角拼图图标，找到「丰巢简历收集」，点击图钉固定到工具栏。</div>
           </div>
         </li>
       </ol>
@@ -307,10 +307,6 @@
 
       <h3>登录账户</h3>
       <p>点击浏览器工具栏中的插件图标，弹出登录面板。首次使用需要<strong>注册账号</strong>（点击底部「没有账号？立即注册」），输入用户名和密码完成注册后即可登录。</p>
-
-      <div class="docs-notice">
-        <strong>注意</strong>：如果使用线上服务器，请将顶部「服务器」下拉框切换为「生产 (43.167.211.80)」，然后再登录/注册。本地测试使用「本地 (localhost:3000)」。
-      </div>
 
       <h3>在 Boss直聘/猎聘上传简历</h3>
       <ol class="step-list">
@@ -354,10 +350,10 @@
     <!-- 管理后台 -->
     <div class="docs-section" id="admin-login">
       <h2>管理后台</h2>
-      <p>管理后台通过浏览器访问：<code class="inline">http://localhost:3000/admin</code>（本地）或 <code class="inline">http://43.167.211.80:3000/admin</code>（线上）。</p>
+      <p>管理后台通过浏览器访问：<code class="inline">http://43.167.211.80:3000/admin</code>。</p>
 
       <h3>登录后台</h3>
-      <p>使用与插件相同的用户名和密码登录。顶部可以切换连接的服务器（本地 / 生产），切换后会自动跳转到对应环境。</p>
+      <p>使用与插件相同的用户名和密码登录。</p>
 
       <h3>文件列表</h3>
       <p>登录后进入文件管理列表，可以看到所有已上传的 PDF 简历。表格展示以下信息：</p>
@@ -440,9 +436,9 @@
           <div class="fc-desc">JWT Token 认证，登录态持久化</div>
         </div>
         <div class="feature-card">
-          <div class="fc-icon">🔄</div>
-          <div class="fc-desc">支持本地开发 / 生产环境一键切换</div>
-          <div class="fc-title">多环境</div>
+          <div class="fc-icon">☁️</div>
+          <div class="fc-desc">简历数据云端存储，多端随时访问</div>
+          <div class="fc-title">云端同步</div>
         </div>
         <div class="feature-card">
           <div class="fc-icon">⌨️</div>
@@ -462,10 +458,10 @@
       <h2>常见问题</h2>
 
       <h3>1. 安装插件后点击图标没有反应？</h3>
-      <p>请在 Chrome 扩展管理页面确认「简历收集(本地)」已启用。如果已经启用，尝试点击右上角刷新按钮，或移除后重新加载。</p>
+      <p>请在 Chrome 扩展管理页面确认「丰巢简历收集」已启用。如果已经启用，尝试点击右上角刷新按钮，或移除后重新加载。</p>
 
       <h3>2. 登录失败怎么办？</h3>
-      <p>首先确认选择了正确的服务器。如果是线上服务器，请确保能访问 <code class="inline">http://43.167.211.80:3000</code>。如果忘记密码，目前需要联系管理员重置。</p>
+      <p>请确认能访问 <code class="inline">http://43.167.211.80:3000</code>。如果忘记密码，请联系管理员重置。</p>
 
       <h3>3. 上传的文件去哪里了？</h3>
       <p>PDF 文件存储在腾讯云 COS（对象存储）中，数据库记录关联了文件的存储地址。你可以通过管理后台预览和下载。</p>
@@ -479,11 +475,11 @@
       <h3>6. 支持哪些 PDF 格式？</h3>
       <p>支持标准的文本型 PDF（含中英文）。纯图片扫描版 PDF 需要 OCR 支持，目前暂不支持。</p>
 
-      <h3>7. 如何切换本地和服务器？</h3>
-      <p>插件登录页和管理后台登录页顶部都有「服务器」下拉框，选择后会自动切换。注意切换服务器后需要重新登录。</p>
+      <h3>7. 需要修改密码或重置密码？</h3>
+      <p>管理员登录后进入「用户管理」页面，点击任意用户的「重置密码」按钮即可设置新密码。</p>
 
       <h3>8. 插件支持哪些招聘网站？</h3>
-      <p>目前主要支持 <strong>Boss直聘</strong>（zhipin.com）和<strong>猎聘</strong>（liepin.com），插件会自动检测这两个平台页面中的 PDF 简历。未来会扩展更多招聘平台支持。此外，也支持在任何网页通过快捷键 <code class="inline">⌘+Shift+U</code>（Windows: <code class="inline">Ctrl+Shift+U</code>）手动上传本地 PDF 文件。</p>
+      <p>目前主要支持 <strong>Boss直聘</strong>（zhipin.com）和<strong>猎聘</strong>（liepin.com），插件会自动检测这两个平台页面中的 PDF 简历。未来会扩展更多招聘平台支持。此外，也支持在任何网页通过快捷键 <code class="inline">⌘+Shift+U</code>（Windows: <code class="inline">Ctrl+Shift+U</code>）手动上传 PDF 文件。</p>
     </div>
 
   </div>

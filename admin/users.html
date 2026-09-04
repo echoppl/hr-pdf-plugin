@@ -175,8 +175,9 @@
 
   <script>
     (function() {
-      var savedServer = localStorage.getItem('selectedServer');
-      var API_BASE = savedServer || window.location.origin;
+      // API 地址始终使用当前站点
+      var API_BASE = window.location.origin;
+      localStorage.removeItem('selectedServer'); // 清理历史遗留的切换配置
 
       var token = localStorage.getItem('token');
       var username = localStorage.getItem('username');

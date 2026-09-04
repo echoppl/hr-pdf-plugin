@@ -25,11 +25,6 @@
           </div>
         </div>
       </a>
-      <span class="server-label" id="serverLabel" style="display:none;">服务器:</span>
-      <select class="server-selector" id="serverSelector" style="display:none;">
-        <option value="http://localhost:3000">本地 (localhost:3000)</option>
-        <option value="http://43.167.211.80:3000">生产 (43.167.211.80)</option>
-      </select>
     </div>
     <div class="user-info">
       <a class="topbar-nav-link" href="/admin/landing.html" target="_blank">首页</a>
@@ -175,23 +170,9 @@
         }
       }
 
-      // 服务器切换逻辑
-      var savedServer = localStorage.getItem('selectedServer');
-      var API_BASE = savedServer || window.location.origin;
-
-      var serverSelector = document.getElementById('serverSelector');
-      // 同步下拉框初始值
-      if (savedServer) {
-        serverSelector.value = savedServer;
-      }
-      serverSelector.addEventListener('change', function() {
-        var newServer = serverSelector.value;
-        localStorage.setItem('selectedServer', newServer);
-        // 切换服务器时清除 token，需要重新登录
-        localStorage.removeItem('token');
-        localStorage.removeItem('username');
-        window.location.href = '/admin/login.html';
-      });
+      // API 地址始终使用当前站点（页面从哪个域名/地址打开就调哪个），不再提供切换
+      var API_BASE = window.location.origin;
+      localStorage.removeItem('selectedServer'); // 清理历史遗留的切换配置
 
       var token = localStorage.getItem('token');
       var username = localStorage.getItem('username');
@@ -201,7 +182,6 @@
       // 检查管理员角色
       var isAdmin = false;
       var adminUsersLink = document.getElementById('adminUsersLink');
-      var serverLabel = document.getElementById('serverLabel');
       (async function checkAdmin() {
         try {
           var res = await fetch(API_BASE + '/api/admin/check', {
@@ -211,8 +191,6 @@
           if (data.code === 200 && data.data.role === 'admin') {
             isAdmin = true;
             adminUsersLink.style.display = '';
-            if (serverLabel) serverLabel.style.display = '';
-            if (serverSelector) serverSelector.style.display = '';
           }
         } catch (err) {
           // 静默处理，非 admin 保持隐藏

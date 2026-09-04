@@ -260,44 +260,12 @@ body {
   background: rgba(255,255,255,.22);
 }
 
-/* 服务器切换器 — 暗色背景适配 */
-.topbar .server-selector {
-  position: relative;
-  z-index: 1;
-  padding: 5px 10px;
-  border: 1px solid rgba(255,255,255,.25);
-  border-radius: var(--radius);
-  font-size: 12px;
-  color: rgba(255,255,255,.75);
-  background: rgba(255,255,255,.1);
-  cursor: pointer;
-  outline: none;
-  transition: border-color 0.2s;
-}
-
-.topbar .server-selector:focus {
-  border-color: rgba(255,255,255,.5);
-}
-
-.topbar .server-selector option {
-  font-size: 12px;
-  padding: 4px;
-  color: #333;
-  background: #fff;
-}
-
 .server-section {
   display: flex;
   align-items: center;
   gap: 12px;
   position: relative;
   z-index: 1;
-}
-
-.server-section .server-label {
-  font-size: 12px;
-  color: rgba(255,255,255,.55);
-  white-space: nowrap;
 }
 
 /* 主内容 */
