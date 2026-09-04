@@ -141,8 +141,40 @@
 
   <div class="toast" id="toast"></div>
 
-  <script>
+    <script>
     (function() {
+      // ── 全局 401 拦截：登录过期时提示并跳转登录 ──
+      var _origFetch = window.fetch ? window.fetch.bind(window) : null;
+      window.fetch = function(input, init) {
+        return _origFetch(input, init).then(function(res) {
+          var url = (typeof input === 'string') ? input : (input && input.url) || '';
+          if (res.status === 401 && url.indexOf('/api/') !== -1) {
+            var cloned = res.clone();
+            cloned.json().then(function(body) {
+              handleUnauthorized((body && body.message) || '登录已过期，请重新登录');
+            }).catch(function() {
+              handleUnauthorized('登录已过期，请重新登录');
+            });
+          }
+          return res;
+        });
+      };
+      function handleUnauthorized(msg) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('username');
+        var t = document.getElementById('toast');
+        if (t) {
+          t.textContent = msg + '，正在跳转到登录页…';
+          t.className = 'toast error show';
+        } else {
+          alert(msg);
+        }
+        if (!window.__unauthorizedRedirecting) {
+          window.__unauthorizedRedirecting = true;
+          setTimeout(function() { window.location.href = '/admin/login.html'; }, 1800);
+        }
+      }
+
       // 服务器切换逻辑
       var savedServer = localStorage.getItem('selectedServer');
       var API_BASE = savedServer || window.location.origin;
