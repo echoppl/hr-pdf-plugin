@@ -313,6 +313,7 @@
               var f = allFiles.find(function(x) { return x.fileId == newFileId; });
               if (f && f.parsed) {
                 parsingFileIds.delete(String(newFileId));
+                renderTable(); // 立即重渲染：移除"解析中"标记后必须重画，否则该行永远停留在 loading 态
                 uploadProgress.textContent = '简历解析完成: ' + file.name;
                 uploadProgress.className = 'upload-progress show';
                 showToast('简历解析完成');
