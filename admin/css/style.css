@@ -1115,3 +1115,39 @@ body {
 .login-back-link:hover {
   color: var(--primary);
 }
+
+/* ====== 联系管理员二维码卡片 ====== */
+.contact-block {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin: 14px 0 6px;
+  padding: 16px 18px;
+  background: #f0faf4;
+  border: 1px solid #d3ecd9;
+  border-radius: 12px;
+}
+.contact-qr {
+  width: 130px;
+  height: 130px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  border: 1px solid #e0e6e3;
+  background: #fff;
+  object-fit: contain;
+}
+.contact-tip {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.contact-tip strong {
+  font-size: 15px;
+  color: #07c160;
+  letter-spacing: 0.3px;
+}
+.contact-tip span {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
