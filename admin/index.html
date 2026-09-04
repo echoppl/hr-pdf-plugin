@@ -223,6 +223,7 @@
       var filteredFiles = [];
       var searchKeyword = '';
       var parsingFileIds = new Set();
+      var autoParseTried = new Set(); // 每个文件每次会话最多自动解析 1 次，防 list->parse 无限循环
       var editingCell = null;  // { td, fileId, field, originalValue }
       var currentPage = 1;
       var pageSize = 10;
@@ -299,15 +300,15 @@
             showToast('文件上传成功，开始解析简历');
 
             // 立即刷新列表，显示解析中状态
-            await loadFiles();
+            await loadFiles(false);
 
-            // 轮询等待解析完成
-            var maxPoll = 30;
+            // 轮询等待解析完成（后端后台解析较慢时给足 90 秒）
+            var maxPoll = 45;
             var polled = 0;
             while (polled < maxPoll) {
               await new Promise(function(r) { setTimeout(r, 2000); });
               polled++;
-              await loadFiles();
+              await loadFiles(false);
               // 检查这个文件是否已经有解析数据
               var f = allFiles.find(function(x) { return x.fileId == newFileId; });
               if (f && f.parsed) {
@@ -333,7 +334,8 @@
         setTimeout(function() { uploadProgress.classList.remove('show'); }, 5000);
       }
 
-      async function loadFiles() {
+      async function loadFiles(autoParse) {
+        // autoParse 为 true 时才会自动触发解析（仅页面首次加载调用）
         fileTableBody.innerHTML = '<tr><td colspan="10" class="loading">加载中...</td></tr>';
         try {
           var res = await fetch(API_BASE + '/api/files/list', {
@@ -347,12 +349,18 @@
           allFiles = data.data.files;
           renderTable();
 
-          // 自动解析未解析的文件（每次间隔 1 秒，避免并发过多）
-          var unparsed = allFiles.filter(function(f) { return !f.parsed && !parsingFileIds.has(String(f.fileId)); });
-          for (var i = 0; i < unparsed.length; i++) {
-            triggerParse(unparsed[i].fileId);
-            if (i < unparsed.length - 1) {
-              await new Promise(function(r) { setTimeout(r, 1000); });
+          // 自动解析未解析的文件：仅页面首次加载时、且每个文件每次会话最多自动尝试 1 次
+          // （防止失败后 list->parse 无限循环）
+          if (autoParse) {
+            var unparsed = allFiles.filter(function(f) {
+              return !f.parsed && !parsingFileIds.has(String(f.fileId)) && !autoParseTried.has(String(f.fileId));
+            });
+            for (var i = 0; i < unparsed.length; i++) {
+              autoParseTried.add(String(unparsed[i].fileId));
+              triggerParse(unparsed[i].fileId);
+              if (i < unparsed.length - 1) {
+                await new Promise(function(r) { setTimeout(r, 1000); });
+              }
             }
           }
         } catch (err) {
@@ -788,7 +796,7 @@
           showToast('解析失败: ' + err.message, true);
         }
         parsingFileIds.delete(String(fileId));
-        loadFiles();
+        loadFiles(false);
       }
 
       async function downloadFile(fileId, fileName, btn) {
@@ -825,7 +833,7 @@
             headers: { 'Authorization': 'Bearer ' + token },
           });
           var data = await res.json();
-          if (data.code === 200) { showToast('文件已删除'); loadFiles(); }
+          if (data.code === 200) { showToast('文件已删除'); loadFiles(false); }
           else { showToast(data.message || '删除失败', true); }
         } catch (err) { showToast('删除失败: ' + err.message, true); }
       }
@@ -843,7 +851,7 @@
         if (file) doUpload(file);
       });
 
-      loadFiles();
+      loadFiles(true); // 仅首次加载自动解析未解析文件（每文件限 1 次）
     })();
   </script>
 </body>
